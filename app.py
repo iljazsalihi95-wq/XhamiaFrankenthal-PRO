@@ -1,7 +1,8 @@
 import sys, sqlite3, os
 from pathlib import Path
 from PySide6.QtWidgets import QApplication,QMainWindow,QWidget,QVBoxLayout,QHBoxLayout,QLabel,QPushButton,QTableWidget,QTableWidgetItem,QComboBox,QFileDialog,QMessageBox,QLineEdit,QDialog,QFormLayout
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QUrl
+from PySide6.QtWebEngineWidgets import QWebEngineView
 from reportlab.platypus import SimpleDocTemplate,Table,TableStyle,Paragraph
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
@@ -30,6 +31,9 @@ class Main(QMainWindow):
   self.year=QComboBox();self.year.addItems([str(x) for x in range(2015,2036)]);self.year.setCurrentText("2026");bar.addWidget(self.year)
   for label,func in [("Importo CSV",self.import_csv),("Eksporto PDF",self.pdf),("Rifresko",self.load)]:
    b=QPushButton(label);b.clicked.connect(func);bar.addWidget(b)
+  self.web=QWebEngineView();self.web.setMinimumHeight(300);self.web.load(QUrl.fromLocalFile(str(Path(getattr(sys,"_MEIPASS",Path(__file__).parent))/"assets"/"ballina_xhamia.html")))
+  v.addWidget(self.web)
+  toggle=QPushButton("Shfaq / fshih ballinën origjinale");toggle.clicked.connect(lambda:self.web.setVisible(not self.web.isVisible()));v.addWidget(toggle)
   self.table=QTableWidget();v.addWidget(self.table);self.mode.currentIndexChanged.connect(self.load);self.year.currentIndexChanged.connect(self.load)
   self.setStyleSheet("QWidget{background:#11233a;color:white;font-size:14px} QPushButton,QComboBox{background:#244562;padding:9px;border-radius:6px} QTableWidget{gridline-color:#45617c}")
   self.load()
