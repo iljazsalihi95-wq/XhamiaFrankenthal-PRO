@@ -1,0 +1,73 @@
+import sys, sqlite3, os
+from pathlib import Path
+from PySide6.QtWidgets import QApplication,QMainWindow,QWidget,QVBoxLayout,QHBoxLayout,QLabel,QPushButton,QTableWidget,QTableWidgetItem,QComboBox,QFileDialog,QMessageBox,QLineEdit,QDialog,QFormLayout
+from PySide6.QtCore import Qt
+from reportlab.platypus import SimpleDocTemplate,Table,TableStyle,Paragraph
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.pagesizes import A4,landscape
+ROOT=Path(os.getenv("APPDATA",str(Path.home())))/"XhamiaFrankenthalPRO"
+ROOT.mkdir(parents=True,exist_ok=True)
+db=sqlite3.connect(ROOT/"xhamia.db")
+db.execute("CREATE TABLE IF NOT EXISTS members(year INTEGER, member_id TEXT, first_name TEXT,last_name TEXT,method TEXT, jan TEXT,feb TEXT,mar TEXT,apr TEXT,may TEXT,jun TEXT,jul TEXT,aug TEXT,sep TEXT,oct TEXT,nov TEXT,dec TEXT)")
+db.execute("CREATE TABLE IF NOT EXISTS finance(year INTEGER,kind TEXT,date TEXT,description TEXT,method TEXT,category TEXT,amount TEXT)")
+db.commit()
+class Login(QDialog):
+ def __init__(self):
+  super().__init__();self.setWindowTitle("Xhamia Frankenthal PRO - Hyrja")
+  f=QFormLayout(self);self.u=QLineEdit();self.p=QLineEdit();self.p.setEchoMode(QLineEdit.Password);f.addRow("Përdoruesi",self.u);f.addRow("Fjalëkalimi",self.p)
+  b=QPushButton("Hyr");b.clicked.connect(self.check);f.addRow(b)
+ def check(self):
+  if self.u.text()=="XhamiaFrankenthal" and self.p.text()=="Xhamia2015":self.accept()
+  else:QMessageBox.warning(self,"Gabim","Kredencialet nuk përputhen")
+class Main(QMainWindow):
+ def __init__(self):
+  super().__init__();self.setWindowTitle("Xhamia Frankenthal PRO");self.resize(1200,760)
+  w=QWidget();self.setCentralWidget(w);v=QVBoxLayout(w)
+  title=QLabel("XHAMIA FRANKENTHAL PRO");title.setAlignment(Qt.AlignCenter);title.setStyleSheet("font-size:26px;font-weight:bold;color:#d5b46b");v.addWidget(title)
+  bar=QHBoxLayout();v.addLayout(bar)
+  self.mode=QComboBox();self.mode.addItems(["Anëtarësia","Hyrjet","Daljet"]);bar.addWidget(self.mode)
+  self.year=QComboBox();self.year.addItems([str(x) for x in range(2015,2036)]);self.year.setCurrentText("2026");bar.addWidget(self.year)
+  for label,func in [("Importo CSV",self.import_csv),("Eksporto PDF",self.pdf),("Rifresko",self.load)]:
+   b=QPushButton(label);b.clicked.connect(func);bar.addWidget(b)
+  self.table=QTableWidget();v.addWidget(self.table);self.mode.currentIndexChanged.connect(self.load);self.year.currentIndexChanged.connect(self.load)
+  self.setStyleSheet("QWidget{background:#11233a;color:white;font-size:14px} QPushButton,QComboBox{background:#244562;padding:9px;border-radius:6px} QTableWidget{gridline-color:#45617c}")
+  self.load()
+ def load(self):
+  y=int(self.year.currentText());mode=self.mode.currentText()
+  if mode=="Anëtarësia":
+   heads=["ID","Emri","Mbiemri","Bank","Jan","Shk","Mar","Pri","Maj","Qer","Kor","Gush","Shta","Tet","Nën","Dhj"]
+   rows=db.execute("SELECT member_id,first_name,last_name,method,jan,feb,mar,apr,may,jun,jul,aug,sep,oct,nov,dec FROM members WHERE year=? ORDER BY first_name,last_name",(y,)).fetchall()
+  else:
+   heads=["Data","Përshkrimi","Cash/Bank","Kategoria","Shuma"]
+   rows=db.execute("SELECT date,description,method,category,amount FROM finance WHERE year=? AND kind=?",(y,mode)).fetchall()
+  self.table.setColumnCount(len(heads));self.table.setHorizontalHeaderLabels(heads);self.table.setRowCount(len(rows))
+  for i,row in enumerate(rows):
+   for j,val in enumerate(row):self.table.setItem(i,j,QTableWidgetItem(str(val or "")))
+  self.table.resizeColumnsToContents()
+ def import_csv(self):
+  import csv
+  p,_=QFileDialog.getOpenFileName(self,"Zgjidh CSV","","CSV (*.csv)")
+  if not p:return
+  try:
+   with open(p,encoding="utf-8-sig",newline="") as f:rows=list(csv.reader(f))
+   y=int(self.year.currentText());mode=self.mode.currentText()
+   for row in rows[1:]:
+    if mode=="Anëtarësia" and len(row)>=16:db.execute("INSERT INTO members VALUES ("+",".join(["?"]*17)+")",[y]+row[:16])
+    elif mode!="Anëtarësia" and len(row)>=5:db.execute("INSERT INTO finance VALUES (?,?,?,?,?,?,?)",[y,mode]+row[:5])
+   db.commit();self.load()
+  except Exception as e:QMessageBox.critical(self,"Importi",str(e))
+ def pdf(self):
+  p,_=QFileDialog.getSaveFileName(self,"Ruaj PDF",f"{self.mode.currentText()}_{self.year.currentText()}.pdf","PDF (*.pdf)")
+  if not p:return
+  try:
+   data=[[self.table.horizontalHeaderItem(j).text() for j in range(self.table.columnCount())]]
+   for i in range(self.table.rowCount()):data.append([(self.table.item(i,j).text() if self.table.item(i,j) else "") for j in range(self.table.columnCount())])
+   doc=SimpleDocTemplate(p,pagesize=landscape(A4));styles=getSampleStyleSheet()
+   t=Table(data,repeatRows=1,hAlign="LEFT");t.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,0),colors.HexColor("#193c58")),("TEXTCOLOR",(0,0),(-1,0),colors.white),("FONTSIZE",(0,0),(-1,-1),6),("GRID",(0,0),(-1,-1),.25,colors.grey)]))
+   doc.build([Paragraph("Xhamia Frankenthal - "+self.mode.currentText()+" "+self.year.currentText(),styles["Heading1"]),t])
+  except Exception as e:QMessageBox.critical(self,"PDF",str(e))
+app=QApplication(sys.argv)
+login=Login()
+if login.exec()==QDialog.Accepted:
+ win=Main();win.show();sys.exit(app.exec())
