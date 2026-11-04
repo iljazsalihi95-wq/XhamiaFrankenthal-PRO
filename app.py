@@ -34,8 +34,16 @@ class Main(QMainWindow):
   self.web=QWebEngineView();self.web.setMinimumHeight(300);self.web.load(QUrl.fromLocalFile(str(Path(getattr(sys,"_MEIPASS",Path(__file__).parent))/"assets"/"ballina_xhamia.html")))
   v.addWidget(self.web)
   toggle=QPushButton("Shfaq / fshih ballinën origjinale");toggle.clicked.connect(lambda:self.web.setVisible(not self.web.isVisible()));v.addWidget(toggle)
-  self.table=QTableWidget();v.addWidget(self.table);self.mode.currentIndexChanged.connect(self.load);self.year.currentIndexChanged.connect(self.load)
-  self.setStyleSheet("QWidget{background:#11233a;color:white;font-size:14px} QPushButton,QComboBox{background:#244562;padding:9px;border-radius:6px} QTableWidget{gridline-color:#45617c}")
+  self.table=QTableWidget();self.table.setAlternatingRowColors(True);v.addWidget(self.table);self.mode.currentIndexChanged.connect(self.load);self.year.currentIndexChanged.connect(self.load)
+  self.setStyleSheet("""
+QMainWindow,QWidget{background:#081d28;color:#f2f7f5;font-family:'Segoe UI';font-size:13px}
+QPushButton{background:#174c55;border:1px solid #b69b57;border-radius:8px;padding:10px;color:#f6e7b5;font-weight:600}
+QPushButton:hover{background:#246a70}
+QComboBox,QLineEdit{background:#143642;border:1px solid #42616a;border-radius:7px;padding:8px;color:white}
+QTableWidget{background:#102c38;alternate-background-color:#173843;gridline-color:#36535b;selection-background-color:#276b6e}
+QHeaderView::section{background:#18515a;color:#f3dfab;padding:8px;border:0}
+QScrollBar{background:#102c38}
+""")
   self.load()
  def load(self):
   y=int(self.year.currentText());mode=self.mode.currentText()
@@ -48,7 +56,7 @@ class Main(QMainWindow):
   self.table.setColumnCount(len(heads));self.table.setHorizontalHeaderLabels(heads);self.table.setRowCount(len(rows))
   for i,row in enumerate(rows):
    for j,val in enumerate(row):self.table.setItem(i,j,QTableWidgetItem(str(val or "")))
-  self.table.resizeColumnsToContents()
+  self.table.resizeColumnsToContents()\n  self.statusBar().showMessage(f"{len(rows)} regjistrime · {mode} · {y}")
  def import_csv(self):
   import csv
   p,_=QFileDialog.getOpenFileName(self,"Zgjidh CSV","","CSV (*.csv)")
