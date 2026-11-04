@@ -5,6 +5,7 @@ from PySide6.QtCore import Qt, QUrl
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from seed_data import seed
 from finance_reports import summary, report
+from receipts import create_receipt
 from reportlab.platypus import SimpleDocTemplate,Table,TableStyle,Paragraph
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
@@ -32,7 +33,7 @@ class Main(QMainWindow):
   bar=QHBoxLayout();v.addLayout(bar)
   self.mode=QComboBox();self.mode.addItems(["Anëtarësia","Hyrjet","Daljet"]);bar.addWidget(self.mode)
   self.year=QComboBox();self.year.addItems([str(x) for x in range(2015,2036)]);self.year.setCurrentText("2026");bar.addWidget(self.year)
-  for label,func in [("Importo CSV",self.import_csv),("Eksporto PDF",self.pdf),("Backup",self.backup),("Raport financiar A4",self.financial_pdf),("Rifresko",self.load)]:
+  for label,func in [("Importo CSV",self.import_csv),("Eksporto PDF",self.pdf),("Backup",self.backup),("Dëftesë PDF",self.receipt_pdf),("Raport financiar A4",self.financial_pdf),("Rifresko",self.load)]:
    b=QPushButton(label);b.clicked.connect(func);bar.addWidget(b)
   self.web=QWebEngineView();self.web.setMinimumHeight(300);self.web.load(QUrl.fromLocalFile(str(Path(getattr(sys,"_MEIPASS",Path(__file__).parent))/"assets"/"ballina_xhamia.html")))
   v.addWidget(self.web)
@@ -82,6 +83,19 @@ QScrollBar{background:#102c38}
    d=totals[mode]
    self.summary_label.setText(f"{mode} {y}: Cash {d['cash']/100:,.2f} € | Bank {d['bank']/100:,.2f} € | Të paklasifikuara {d['other']/100:,.2f} € | Përjashtuar {d['excluded']} rreshta")
   else:self.summary_label.setText(f"Anëtarësia {y}: {len(rows)} rreshta nga burimi zyrtar")
+ def receipt_pdf(self):
+  if self.mode.currentText()!="Hyrjet":
+   QMessageBox.warning(self,"Dëftesa","Zgjidh rubrikën Hyrjet.");return
+  i=self.table.currentRow()
+  if i<0:
+   QMessageBox.warning(self,"Dëftesa","Zgjidh një pagesë në tabelë.");return
+  fields=[self.table.item(i,j).text() if self.table.item(i,j) else "" for j in range(5)]
+  p,_=QFileDialog.getSaveFileName(self,"Ruaj dëftesën","Deftese_Xhamia.pdf","PDF (*.pdf)")
+  if not p:return
+  try:
+   create_receipt(p,self.year.currentText(),fields)
+   QMessageBox.information(self,"Dëftesa","PDF u ruajt.")
+  except Exception as e:QMessageBox.critical(self,"Dëftesa",str(e))
  def financial_pdf(self):
   p,_=QFileDialog.getSaveFileName(self,"Ruaj raportin financiar",f"Raporti_financiar_{self.year.currentText()}.pdf","PDF (*.pdf)")
   if not p:return
