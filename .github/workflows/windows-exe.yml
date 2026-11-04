@@ -20,7 +20,7 @@ jobs:
       - name: Test source imports and financial summaries
         run: python -m unittest -v test_sources
       - name: Build desktop executable
-        run: python -m PyInstaller --noconfirm --onefile --windowed --name XhamiaFrankenthalPRO --add-data "assets/ballina_xhamia.html;assets" --add-data "data;data" --hidden-import PySide6.QtWebEngineWidgets app.py
+        run: python -m PyInstaller --noconfirm --onefile --windowed --name XhamiaFrankenthalPRO --add-data "data;data" app.py
       - name: Smoke test EXE presence
         shell: pwsh
         run: |
