@@ -3,6 +3,7 @@ from pathlib import Path
 from PySide6.QtWidgets import QApplication,QMainWindow,QWidget,QVBoxLayout,QHBoxLayout,QLabel,QPushButton,QTableWidget,QTableWidgetItem,QComboBox,QFileDialog,QMessageBox,QLineEdit,QDialog,QFormLayout
 from PySide6.QtCore import Qt, QUrl
 from PySide6.QtWebEngineWidgets import QWebEngineView
+from seed_data import seed
 from reportlab.platypus import SimpleDocTemplate,Table,TableStyle,Paragraph
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
@@ -13,6 +14,7 @@ db=sqlite3.connect(ROOT/"xhamia.db")
 db.execute("CREATE TABLE IF NOT EXISTS members(year INTEGER, member_id TEXT, first_name TEXT,last_name TEXT,method TEXT, jan TEXT,feb TEXT,mar TEXT,apr TEXT,may TEXT,jun TEXT,jul TEXT,aug TEXT,sep TEXT,oct TEXT,nov TEXT,dec TEXT)")
 db.execute("CREATE TABLE IF NOT EXISTS finance(year INTEGER,kind TEXT,date TEXT,description TEXT,method TEXT,category TEXT,amount TEXT)")
 db.commit()
+seed(db)
 class Login(QDialog):
  def __init__(self):
   super().__init__();self.setWindowTitle("Xhamia Frankenthal PRO - Hyrja")
@@ -49,10 +51,25 @@ QScrollBar{background:#102c38}
   y=int(self.year.currentText());mode=self.mode.currentText()
   if mode=="Anëtarësia":
    heads=["ID","Emri","Mbiemri","Bank","Jan","Shk","Mar","Pri","Maj","Qer","Kor","Gush","Shta","Tet","Nën","Dhj"]
-   rows=db.execute("SELECT member_id,first_name,last_name,method,jan,feb,mar,apr,may,jun,jul,aug,sep,oct,nov,dec FROM members WHERE year=? ORDER BY first_name,last_name",(y,)).fetchall()
+   rows=db.execute("""SELECT m.member_id,m.first_name,m.last_name,m.bank,
+  MAX(CASE WHEN s.month=1 THEN s.raw_value END),
+  MAX(CASE WHEN s.month=2 THEN s.raw_value END),
+  MAX(CASE WHEN s.month=3 THEN s.raw_value END),
+  MAX(CASE WHEN s.month=4 THEN s.raw_value END),
+  MAX(CASE WHEN s.month=5 THEN s.raw_value END),
+  MAX(CASE WHEN s.month=6 THEN s.raw_value END),
+  MAX(CASE WHEN s.month=7 THEN s.raw_value END),
+  MAX(CASE WHEN s.month=8 THEN s.raw_value END),
+  MAX(CASE WHEN s.month=9 THEN s.raw_value END),
+  MAX(CASE WHEN s.month=10 THEN s.raw_value END),
+  MAX(CASE WHEN s.month=11 THEN s.raw_value END),
+  MAX(CASE WHEN s.month=12 THEN s.raw_value END)
+  FROM source_members m LEFT JOIN source_months s ON m.year=s.year AND m.source_row=s.source_row
+  WHERE m.year=? GROUP BY m.year,m.source_row ORDER BY m.first_name,m.last_name""",(y,)).fetchall()
   else:
    heads=["Data","Përshkrimi","Cash/Bank","Kategoria","Shuma"]
-   rows=db.execute("SELECT date,description,method,category,amount FROM finance WHERE year=? AND kind=?",(y,mode)).fetchall()
+   sheet=mode if y==2026 else f"{mode} {y}"
+   rows=db.execute("SELECT date,description,account,category,printf('%.2f €',amount_cents/100.0) FROM source_finance WHERE source_sheet=? ORDER BY source_row",(sheet,)).fetchall()
   self.table.setColumnCount(len(heads));self.table.setHorizontalHeaderLabels(heads);self.table.setRowCount(len(rows))
   for i,row in enumerate(rows):
    for j,val in enumerate(row):self.table.setItem(i,j,QTableWidgetItem(str(val or "")))
