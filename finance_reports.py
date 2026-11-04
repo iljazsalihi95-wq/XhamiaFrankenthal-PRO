@@ -42,7 +42,7 @@ def report(db,year,path):
     rows=[["Rubrika","Cash","Bank","Pa klasifikim","Rreshta"]]
     for kind in ("Hyrjet","Daljet"):
         d=s[kind];rows.append([kind,*[f"{d[k]/100:,.2f} €" for k in ("cash","bank","other")],str(d["count"])])
-    t=Table(rows,colWidths=[110,105,105,105,70])
+    t=Table(rows,colWidths=[105,90,90,100,65])
     t.setStyle(TableStyle([("FONTNAME",(0,0),(-1,-1),font),("BACKGROUND",(0,0),(-1,0),colors.HexColor("#174c55")),("TEXTCOLOR",(0,0),(-1,0),colors.white),("GRID",(0,0),(-1,-1),.4,colors.grey),("BOTTOMPADDING",(0,0),(-1,-1),9)]))
     story.append(t)
     story.append(Spacer(1,16))
