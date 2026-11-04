@@ -1,4 +1,4 @@
-import sys, sqlite3, os
+import sys, sqlite3, os, shutil, datetime
 from pathlib import Path
 from PySide6.QtWidgets import QApplication,QMainWindow,QWidget,QVBoxLayout,QHBoxLayout,QLabel,QPushButton,QTableWidget,QTableWidgetItem,QComboBox,QFileDialog,QMessageBox,QLineEdit,QDialog,QFormLayout
 from PySide6.QtCore import Qt, QUrl
@@ -31,7 +31,7 @@ class Main(QMainWindow):
   bar=QHBoxLayout();v.addLayout(bar)
   self.mode=QComboBox();self.mode.addItems(["Anëtarësia","Hyrjet","Daljet"]);bar.addWidget(self.mode)
   self.year=QComboBox();self.year.addItems([str(x) for x in range(2015,2036)]);self.year.setCurrentText("2026");bar.addWidget(self.year)
-  for label,func in [("Importo CSV",self.import_csv),("Eksporto PDF",self.pdf),("Rifresko",self.load)]:
+  for label,func in [("Importo CSV",self.import_csv),("Eksporto PDF",self.pdf),("Backup",self.backup),("Rifresko",self.load)]:
    b=QPushButton(label);b.clicked.connect(func);bar.addWidget(b)
   self.web=QWebEngineView();self.web.setMinimumHeight(300);self.web.load(QUrl.fromLocalFile(str(Path(getattr(sys,"_MEIPASS",Path(__file__).parent))/"assets"/"ballina_xhamia.html")))
   v.addWidget(self.web)
@@ -74,6 +74,13 @@ QScrollBar{background:#102c38}
   for i,row in enumerate(rows):
    for j,val in enumerate(row):self.table.setItem(i,j,QTableWidgetItem(str(val or "")))
   self.table.resizeColumnsToContents()\n  self.statusBar().showMessage(f"{len(rows)} regjistrime · {mode} · {y}")
+ def backup(self):
+  target,_=QFileDialog.getSaveFileName(self,"Ruaj kopjen e sigurisë",f"XhamiaFrankenthal_{datetime.date.today().isoformat()}.sqlite3","SQLite (*.sqlite3)")
+  if not target:return
+  try:
+   with sqlite3.connect(target) as backup_db:db.backup(backup_db)
+   QMessageBox.information(self,"Backup","Kopja e sigurisë u ruajt.")
+  except Exception as e:QMessageBox.critical(self,"Backup",str(e))
  def import_csv(self):
   import csv
   p,_=QFileDialog.getOpenFileName(self,"Zgjidh CSV","","CSV (*.csv)")
