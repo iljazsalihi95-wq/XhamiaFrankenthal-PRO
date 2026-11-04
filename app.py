@@ -1,6 +1,6 @@
 import sys, sqlite3, os, shutil, datetime, hashlib, hmac
 from pathlib import Path
-from PySide6.QtWidgets import QApplication,QMainWindow,QWidget,QVBoxLayout,QHBoxLayout,QLabel,QPushButton,QTableWidget,QTableWidgetItem,QComboBox,QFileDialog,QMessageBox,QLineEdit,QDialog,QFormLayout
+from PySide6.QtWidgets import QApplication,QMainWindow,QWidget,QVBoxLayout,QHBoxLayout,QLabel,QPushButton,QTableWidget,QTableWidgetItem,QComboBox,QFileDialog,QMessageBox,QLineEdit,QDialog,QFormLayout,QFrame
 from PySide6.QtCore import Qt, QUrl
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from seed_data import seed
@@ -30,19 +30,31 @@ class Main(QMainWindow):
   super().__init__();self.setWindowTitle("Xhamia Frankenthal PRO");self.resize(1200,760)
   w=QWidget();self.setCentralWidget(w);v=QVBoxLayout(w)
   title=QLabel("XHAMIA FRANKENTHAL PRO");title.setAlignment(Qt.AlignCenter);title.setStyleSheet("font-size:26px;font-weight:bold;color:#d5b46b");v.addWidget(title)
-  bar=QHBoxLayout();v.addLayout(bar)
+  body=QHBoxLayout();v.addLayout(body,1)
+  sidebar=QFrame();sidebar.setObjectName("sidebar");sidebar.setFixedWidth(210)
+  nav=QVBoxLayout(sidebar);nav.setContentsMargins(12,20,12,16);nav.setSpacing(10)
+  brand=QLabel("ISLAMISCHER VEREIN FRANKENTHAL e.V.");brand.setWordWrap(True);brand.setAlignment(Qt.AlignCenter);brand.setStyleSheet("color:#e2c47c;font-weight:bold;font-size:13px");nav.addWidget(brand)
+  for name in ("Ballina","Anëtarësia","Hyrjet","Daljet","Bilanci","Dëftesat","Hudbe & Derse"):
+   button=QPushButton(name);button.setMinimumHeight(42)
+   button.clicked.connect(lambda checked=False,n=name:self.navigate(n))
+   nav.addWidget(button)
+  nav.addStretch()
+  body.addWidget(sidebar)
+  workspace=QWidget();work=QVBoxLayout(workspace);work.setContentsMargins(8,0,0,0)
+  body.addWidget(workspace,1)
+  bar=QHBoxLayout();work.addLayout(bar)
   self.mode=QComboBox();self.mode.addItems(["Anëtarësia","Hyrjet","Daljet"]);bar.addWidget(self.mode)
   self.year=QComboBox();self.year.addItems([str(x) for x in range(2015,2036)]);self.year.setCurrentText("2026");bar.addWidget(self.year)
   for label,func in [("Importo CSV",self.import_csv),("Eksporto PDF",self.pdf),("Backup",self.backup),("Dëftesë PDF",self.receipt_pdf),("Raport financiar A4",self.financial_pdf),("Rifresko",self.load)]:
    b=QPushButton(label);b.clicked.connect(func);bar.addWidget(b)
   self.web=QWebEngineView();self.web.setMinimumHeight(300);self.web.load(QUrl.fromLocalFile(str(Path(getattr(sys,"_MEIPASS",Path(__file__).parent))/"assets"/"ballina_xhamia.html")))
-  v.addWidget(self.web)
-  toggle=QPushButton("Shfaq / fshih ballinën origjinale");toggle.clicked.connect(lambda:self.web.setVisible(not self.web.isVisible()));v.addWidget(toggle)
-  self.summary_label=QLabel("Raport nga të dhënat e importuara — pa rakordim bankar");v.addWidget(self.summary_label)
-  self.table=QTableWidget();self.table.setAlternatingRowColors(True);v.addWidget(self.table);self.mode.currentIndexChanged.connect(self.load);self.year.currentIndexChanged.connect(self.load)
+  work.addWidget(self.web,2)
+  toggle=QPushButton("Shfaq / fshih ballinën origjinale");toggle.clicked.connect(lambda:self.web.setVisible(not self.web.isVisible()));work.addWidget(toggle)
+  self.summary_label=QLabel("Raport nga të dhënat e importuara — pa rakordim bankar");work.addWidget(self.summary_label)
+  self.table=QTableWidget();self.table.setAlternatingRowColors(True);work.addWidget(self.table,3);self.mode.currentIndexChanged.connect(self.load);self.year.currentIndexChanged.connect(self.load)
   self.setStyleSheet("""
 QMainWindow,QWidget{background:#081d28;color:#f2f7f5;font-family:'Segoe UI';font-size:13px}
-QPushButton{background:#174c55;border:1px solid #b69b57;border-radius:8px;padding:10px;color:#f6e7b5;font-weight:600}
+QFrame#sidebar{background:#0e3039;border:1px solid #a28b54;border-radius:16px} QPushButton{background:#174c55;border:1px solid #b69b57;border-radius:8px;padding:10px;color:#f6e7b5;font-weight:600}
 QPushButton:hover{background:#246a70}
 QComboBox,QLineEdit{background:#143642;border:1px solid #42616a;border-radius:7px;padding:8px;color:white}
 QTableWidget{background:#102c38;alternate-background-color:#173843;gridline-color:#36535b;selection-background-color:#276b6e}
@@ -50,6 +62,18 @@ QHeaderView::section{background:#18515a;color:#f3dfab;padding:8px;border:0}
 QScrollBar{background:#102c38}
 """)
   self.load()
+ def navigate(self,name):
+  if name in ("Anëtarësia","Hyrjet","Daljet"):
+   self.mode.setCurrentText(name)
+   self.web.setVisible(False)
+  elif name=="Ballina":
+   self.web.setVisible(True)
+  elif name=="Bilanci":
+   self.financial_pdf()
+  elif name=="Dëftesat":
+   self.receipt_pdf()
+  elif name=="Hudbe & Derse":
+   QMessageBox.information(self,"Arkiva","Arkiva e plotë e hutbeve dhe derseve nuk është importuar ende.")
  def load(self):
   y=int(self.year.currentText());mode=self.mode.currentText()
   if mode=="Anëtarësia":
