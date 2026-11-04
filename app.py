@@ -1,8 +1,7 @@
 import sys, sqlite3, os, shutil, datetime, hashlib, hmac
 from pathlib import Path
-from PySide6.QtWidgets import QApplication,QMainWindow,QWidget,QVBoxLayout,QHBoxLayout,QLabel,QPushButton,QTableWidget,QTableWidgetItem,QComboBox,QFileDialog,QMessageBox,QLineEdit,QDialog,QFormLayout,QFrame
+from PySide6.QtWidgets import QApplication,QMainWindow,QWidget,QVBoxLayout,QHBoxLayout,QLabel,QPushButton,QTableWidget,QTableWidgetItem,QComboBox,QFileDialog,QMessageBox,QLineEdit,QDialog,QFormLayout,QFrame,QDoubleSpinBox
 from PySide6.QtCore import Qt, QUrl
-from PySide6.QtWebEngineWidgets import QWebEngineView
 from seed_data import seed
 from finance_reports import summary, report
 from receipts import create_receipt
@@ -48,9 +47,12 @@ class Main(QMainWindow):
   self.year=QComboBox();self.year.addItems([str(x) for x in range(2015,2036)]);self.year.setCurrentText("2026");bar.addWidget(self.year)
   for label,func in [("Importo CSV",self.import_csv),("Eksporto PDF",self.pdf),("Backup",self.backup),("Dëftesë PDF",self.receipt_pdf),("Raport financiar A4",self.financial_pdf),("Rifresko",self.load)]:
    b=QPushButton(label);b.clicked.connect(func);bar.addWidget(b)
-  self.web=QWebEngineView();self.web.setMinimumHeight(300);self.web.load(QUrl.fromLocalFile(str(Path(getattr(sys,"_MEIPASS",Path(__file__).parent))/"assets"/"ballina_xhamia.html")))
-  work.addWidget(self.web,2)
-  toggle=QPushButton("Shfaq / fshih ballinën origjinale");toggle.clicked.connect(lambda:self.web.setVisible(not self.web.isVisible()));work.addWidget(toggle)
+  self.dashboard=QLabel("ADMINISTRIMI I XHAMISË  •  Regjistrime dhe llogaritje automatike")
+  self.dashboard.setAlignment(Qt.AlignCenter);self.dashboard.setStyleSheet("font-size:18px;color:#e2c47c;padding:16px")
+  work.addWidget(self.dashboard)
+  actions=QHBoxLayout();work.addLayout(actions)
+  for label,callback in (("Shto anëtar",self.add_member),("Regjistro hyrje",lambda:self.add_transaction("Hyrjet")),("Regjistro dalje",lambda:self.add_transaction("Daljet"))):
+   btn=QPushButton(label);btn.clicked.connect(callback);actions.addWidget(btn)
   self.summary_label=QLabel("Raport nga të dhënat e importuara — pa rakordim bankar");work.addWidget(self.summary_label)
   self.table=QTableWidget();self.table.setAlternatingRowColors(True);work.addWidget(self.table,3);self.mode.currentIndexChanged.connect(self.load);self.year.currentIndexChanged.connect(self.load)
   self.setStyleSheet("""
@@ -64,6 +66,33 @@ QScrollBar{background:#102c38}
 """)
   self.search.textChanged.connect(self.apply_search)
   self.load()
+ def add_member(self):
+  dialog=QDialog(self);dialog.setWindowTitle("Anëtar i ri");form=QFormLayout(dialog)
+  inputs=[]
+  for label in ("ID","Emri","Mbiemri","Metoda (Cash/Bank)"):
+   field=QLineEdit();form.addRow(label,field);inputs.append(field)
+  save=QPushButton("Ruaj anëtarin");form.addRow(save)
+  def commit():
+   values=[x.text().strip() for x in inputs]
+   if not all(values[:3]):QMessageBox.warning(dialog,"Kontroll","ID, emri dhe mbiemri janë të detyrueshëm.");return
+   db.execute("INSERT INTO members(year,member_id,first_name,last_name,method) VALUES (?,?,?,?,?)",(int(self.year.currentText()),*values))
+   db.commit();dialog.accept();self.mode.setCurrentText("Anëtarësia");self.load()
+  save.clicked.connect(commit);dialog.exec()
+ def add_transaction(self,kind):
+  dialog=QDialog(self);dialog.setWindowTitle("Regjistro "+kind);form=QFormLayout(dialog)
+  fields=[]
+  for label in ("Data (DD.MM.VVVV)","Përshkrimi","Metoda (Cash/Bank)","Kategoria"):
+   field=QLineEdit();form.addRow(label,field);fields.append(field)
+  amount=QDoubleSpinBox();amount.setMaximum(10000000);amount.setDecimals(2);amount.setSuffix(" €");form.addRow("Shuma",amount)
+  save=QPushButton("Ruaj regjistrimin");form.addRow(save)
+  def commit():
+   vals=[x.text().strip() for x in fields]
+   try:datetime.datetime.strptime(vals[0],"%d.%m.%Y")
+   except ValueError:QMessageBox.warning(dialog,"Data","Përdor DD.MM.VVVV");return
+   if not vals[1] or vals[2].lower() not in ("cash","bank"):QMessageBox.warning(dialog,"Kontroll","Plotëso përshkrimin dhe Cash/Bank.");return
+   db.execute("INSERT INTO finance VALUES (?,?,?,?,?,?,?)",(int(self.year.currentText()),kind,*vals,f"{amount.value():.2f}"))
+   db.commit();dialog.accept();self.mode.setCurrentText(kind);self.load()
+  save.clicked.connect(commit);dialog.exec()
  def apply_search(self):
   needle=self.search.text().strip().casefold()
   for i in range(self.table.rowCount()):
@@ -72,9 +101,9 @@ QScrollBar{background:#102c38}
  def navigate(self,name):
   if name in ("Anëtarësia","Hyrjet","Daljet"):
    self.mode.setCurrentText(name)
-   self.web.setVisible(False)
+   self.dashboard.setVisible(False)
   elif name=="Ballina":
-   self.web.setVisible(True)
+   self.dashboard.setVisible(True)
   elif name=="Bilanci":
    self.financial_pdf()
   elif name=="Dëftesat":
