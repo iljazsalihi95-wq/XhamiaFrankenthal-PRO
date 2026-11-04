@@ -21,7 +21,7 @@ class Login(QDialog):
   f=QFormLayout(self);self.u=QLineEdit();self.p=QLineEdit();self.p.setEchoMode(QLineEdit.Password);f.addRow("Përdoruesi",self.u);f.addRow("Fjalëkalimi",self.p)
   b=QPushButton("Hyr");b.clicked.connect(self.check);f.addRow(b)
  def check(self):
-  if self.u.text()=="XhamiaFrankenthal" and self.p.text()=="Xhamia2015":self.accept()
+  if self.u.text()=="XhamiaFrankenthal" and self.p.text()==os.environ.get("XHAMIA_INITIAL_PASSWORD","") and bool(self.p.text()):self.accept()
   else:QMessageBox.warning(self,"Gabim","Kredencialet nuk përputhen")
 class Main(QMainWindow):
  def __init__(self):
@@ -73,7 +73,8 @@ QScrollBar{background:#102c38}
   self.table.setColumnCount(len(heads));self.table.setHorizontalHeaderLabels(heads);self.table.setRowCount(len(rows))
   for i,row in enumerate(rows):
    for j,val in enumerate(row):self.table.setItem(i,j,QTableWidgetItem(str(val or "")))
-  self.table.resizeColumnsToContents()\n  self.statusBar().showMessage(f"{len(rows)} regjistrime · {mode} · {y}")
+  self.table.resizeColumnsToContents()
+  self.statusBar().showMessage(f"{len(rows)} regjistrime · {mode} · {y}")
  def backup(self):
   target,_=QFileDialog.getSaveFileName(self,"Ruaj kopjen e sigurisë",f"XhamiaFrankenthal_{datetime.date.today().isoformat()}.sqlite3","SQLite (*.sqlite3)")
   if not target:return
