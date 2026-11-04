@@ -44,6 +44,7 @@ class Main(QMainWindow):
   body.addWidget(workspace,1)
   bar=QHBoxLayout();work.addLayout(bar)
   self.mode=QComboBox();self.mode.addItems(["Anëtarësia","Hyrjet","Daljet"]);bar.addWidget(self.mode)
+  self.search=QLineEdit();self.search.setPlaceholderText("Kërko emër, mbiemër, përshkrim...");bar.addWidget(self.search,2)
   self.year=QComboBox();self.year.addItems([str(x) for x in range(2015,2036)]);self.year.setCurrentText("2026");bar.addWidget(self.year)
   for label,func in [("Importo CSV",self.import_csv),("Eksporto PDF",self.pdf),("Backup",self.backup),("Dëftesë PDF",self.receipt_pdf),("Raport financiar A4",self.financial_pdf),("Rifresko",self.load)]:
    b=QPushButton(label);b.clicked.connect(func);bar.addWidget(b)
@@ -61,7 +62,13 @@ QTableWidget{background:#102c38;alternate-background-color:#173843;gridline-colo
 QHeaderView::section{background:#18515a;color:#f3dfab;padding:8px;border:0}
 QScrollBar{background:#102c38}
 """)
+  self.search.textChanged.connect(self.apply_search)
   self.load()
+ def apply_search(self):
+  needle=self.search.text().strip().casefold()
+  for i in range(self.table.rowCount()):
+   visible=not needle or any(needle in (self.table.item(i,j).text().casefold() if self.table.item(i,j) else "") for j in range(self.table.columnCount()))
+   self.table.setRowHidden(i,not visible)
  def navigate(self,name):
   if name in ("Anëtarësia","Hyrjet","Daljet"):
    self.mode.setCurrentText(name)
@@ -101,6 +108,7 @@ QScrollBar{background:#102c38}
   for i,row in enumerate(rows):
    for j,val in enumerate(row):self.table.setItem(i,j,QTableWidgetItem(str(val or "")))
   self.table.resizeColumnsToContents()
+  self.apply_search()
   self.statusBar().showMessage(f"{len(rows)} regjistrime · {mode} · {y}")
   if mode!="Anëtarësia":
    totals=summary(db,y)
