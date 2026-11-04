@@ -4,6 +4,7 @@ from PySide6.QtWidgets import QApplication,QMainWindow,QWidget,QVBoxLayout,QHBox
 from PySide6.QtCore import Qt, QUrl
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from seed_data import seed
+from finance_reports import summary, report
 from reportlab.platypus import SimpleDocTemplate,Table,TableStyle,Paragraph
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
@@ -31,11 +32,12 @@ class Main(QMainWindow):
   bar=QHBoxLayout();v.addLayout(bar)
   self.mode=QComboBox();self.mode.addItems(["Anëtarësia","Hyrjet","Daljet"]);bar.addWidget(self.mode)
   self.year=QComboBox();self.year.addItems([str(x) for x in range(2015,2036)]);self.year.setCurrentText("2026");bar.addWidget(self.year)
-  for label,func in [("Importo CSV",self.import_csv),("Eksporto PDF",self.pdf),("Backup",self.backup),("Rifresko",self.load)]:
+  for label,func in [("Importo CSV",self.import_csv),("Eksporto PDF",self.pdf),("Backup",self.backup),("Raport financiar A4",self.financial_pdf),("Rifresko",self.load)]:
    b=QPushButton(label);b.clicked.connect(func);bar.addWidget(b)
   self.web=QWebEngineView();self.web.setMinimumHeight(300);self.web.load(QUrl.fromLocalFile(str(Path(getattr(sys,"_MEIPASS",Path(__file__).parent))/"assets"/"ballina_xhamia.html")))
   v.addWidget(self.web)
   toggle=QPushButton("Shfaq / fshih ballinën origjinale");toggle.clicked.connect(lambda:self.web.setVisible(not self.web.isVisible()));v.addWidget(toggle)
+  self.summary_label=QLabel("Raport nga të dhënat e importuara — pa rakordim bankar");v.addWidget(self.summary_label)
   self.table=QTableWidget();self.table.setAlternatingRowColors(True);v.addWidget(self.table);self.mode.currentIndexChanged.connect(self.load);self.year.currentIndexChanged.connect(self.load)
   self.setStyleSheet("""
 QMainWindow,QWidget{background:#081d28;color:#f2f7f5;font-family:'Segoe UI';font-size:13px}
@@ -75,6 +77,18 @@ QScrollBar{background:#102c38}
    for j,val in enumerate(row):self.table.setItem(i,j,QTableWidgetItem(str(val or "")))
   self.table.resizeColumnsToContents()
   self.statusBar().showMessage(f"{len(rows)} regjistrime · {mode} · {y}")
+  if mode!="Anëtarësia":
+   totals=summary(db,y)
+   d=totals[mode]
+   self.summary_label.setText(f"{mode} {y}: Cash {d['cash']/100:,.2f} € | Bank {d['bank']/100:,.2f} € | Të paklasifikuara {d['other']/100:,.2f} € | Përjashtuar {d['excluded']} rreshta")
+  else:self.summary_label.setText(f"Anëtarësia {y}: {len(rows)} rreshta nga burimi zyrtar")
+ def financial_pdf(self):
+  p,_=QFileDialog.getSaveFileName(self,"Ruaj raportin financiar",f"Raporti_financiar_{self.year.currentText()}.pdf","PDF (*.pdf)")
+  if not p:return
+  try:
+   report(db,int(self.year.currentText()),p)
+   QMessageBox.information(self,"Raporti","Raporti financiar A4 u ruajt.")
+  except Exception as e:QMessageBox.critical(self,"Raporti",str(e))
  def backup(self):
   target,_=QFileDialog.getSaveFileName(self,"Ruaj kopjen e sigurisë",f"XhamiaFrankenthal_{datetime.date.today().isoformat()}.sqlite3","SQLite (*.sqlite3)")
   if not target:return
