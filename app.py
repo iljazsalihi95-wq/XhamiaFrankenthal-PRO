@@ -129,10 +129,13 @@ QScrollBar{background:#102c38}
   MAX(CASE WHEN s.month=12 THEN s.raw_value END)
   FROM source_members m LEFT JOIN source_months s ON m.year=s.year AND m.source_row=s.source_row
   WHERE m.year=? GROUP BY m.year,m.source_row ORDER BY m.first_name,m.last_name""",(y,)).fetchall()
+   extra=db.execute("SELECT member_id,first_name,last_name,method,jan,feb,mar,apr,may,jun,jul,aug,sep,oct,nov,dec FROM members WHERE year=?",(y,)).fetchall()
+   rows=list(rows)+list(extra)
   else:
    heads=["Data","Përshkrimi","Cash/Bank","Kategoria","Shuma"]
    sheet=mode if y==2026 else f"{mode} {y}"
-   rows=db.execute("SELECT date,description,account,category,printf('%.2f €',amount_cents/100.0) FROM source_finance WHERE source_sheet=? ORDER BY source_row",(sheet,)).fetchall()
+   rows=list(db.execute("SELECT date,description,account,category,printf('%.2f €',amount_cents/100.0) FROM source_finance WHERE source_sheet=? ORDER BY source_row",(sheet,)).fetchall())
+   rows+=db.execute("SELECT date,description,method,category,amount FROM finance WHERE year=? AND kind=?",(y,mode)).fetchall()
   self.table.setColumnCount(len(heads));self.table.setHorizontalHeaderLabels(heads);self.table.setRowCount(len(rows))
   for i,row in enumerate(rows):
    for j,val in enumerate(row):self.table.setItem(i,j,QTableWidgetItem(str(val or "")))
