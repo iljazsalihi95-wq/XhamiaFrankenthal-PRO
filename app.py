@@ -1,4 +1,4 @@
-import sys, sqlite3, os, shutil, datetime
+import sys, sqlite3, os, shutil, datetime, hashlib, hmac
 from pathlib import Path
 from PySide6.QtWidgets import QApplication,QMainWindow,QWidget,QVBoxLayout,QHBoxLayout,QLabel,QPushButton,QTableWidget,QTableWidgetItem,QComboBox,QFileDialog,QMessageBox,QLineEdit,QDialog,QFormLayout
 from PySide6.QtCore import Qt, QUrl
@@ -21,7 +21,7 @@ class Login(QDialog):
   f=QFormLayout(self);self.u=QLineEdit();self.p=QLineEdit();self.p.setEchoMode(QLineEdit.Password);f.addRow("Përdoruesi",self.u);f.addRow("Fjalëkalimi",self.p)
   b=QPushButton("Hyr");b.clicked.connect(self.check);f.addRow(b)
  def check(self):
-  if self.u.text()=="XhamiaFrankenthal" and self.p.text()==os.environ.get("XHAMIA_INITIAL_PASSWORD","") and bool(self.p.text()):self.accept()
+  if self.u.text()=="XhamiaFrankenthal" and hmac.compare_digest(hashlib.sha256(self.p.text().encode()).hexdigest(),"4590c57bbe71fba3b0b4586e439d54f410eca68a7e1e17ba8f0f16b129d02b6f"):self.accept()
   else:QMessageBox.warning(self,"Gabim","Kredencialet nuk përputhen")
 class Main(QMainWindow):
  def __init__(self):
