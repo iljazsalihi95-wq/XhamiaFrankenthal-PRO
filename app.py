@@ -76,6 +76,9 @@ class Main(QMainWindow):
   bar=QHBoxLayout();work.addLayout(bar)
   self.mode=QComboBox();self.mode.addItems(["Anëtarësia","Hyrjet","Daljet"]);bar.addWidget(self.mode)
   self.search=QLineEdit();self.search.setPlaceholderText("Kërko emër, mbiemër, përshkrim...");bar.addWidget(self.search,2)
+  self.month_filter=QComboBox();self.month_filter.addItems(["Të gjithë muajt","Janar","Shkurt","Mars","Prill","Maj","Qershor","Korrik","Gusht","Shtator","Tetor","Nëntor","Dhjetor"]);bar.addWidget(self.month_filter)
+  self.date_filter=QLineEdit();self.date_filter.setPlaceholderText("Data: DD.MM.VVVV");self.date_filter.setMaximumWidth(160);bar.addWidget(self.date_filter)
+  self.clear_filter=QPushButton("Pastro");self.clear_filter.clicked.connect(self.reset_filters);bar.addWidget(self.clear_filter)
   self.year=QComboBox();self.year.addItems([str(x) for x in range(2015,2051)]);self.year.setCurrentText("2026");bar.addWidget(self.year)
   for label,func in [("Importo CSV",self.import_csv),("Eksporto PDF",self.pdf),("Backup",self.backup),("Dëftesë PDF",self.receipt_pdf),("Raport financiar A4",self.financial_pdf),("Rifresko",self.load)]:
    b=QPushButton(label);b.clicked.connect(func);bar.addWidget(b)
@@ -97,6 +100,8 @@ QHeaderView::section{background:#18515a;color:#f3dfab;padding:11px;border:0;font
 QScrollBar{background:#102c38}\nQDialog{background:#081d28;color:#f2f7f5}
 """)
   self.search.textChanged.connect(self.apply_search)
+  self.month_filter.currentIndexChanged.connect(self.apply_search)
+  self.date_filter.textChanged.connect(self.apply_search)
   self.load()
  def rollover_members(self):
   source=int(self.year.currentText())
@@ -143,13 +148,38 @@ QScrollBar{background:#102c38}\nQDialog{background:#081d28;color:#f2f7f5}
    db.execute("INSERT INTO finance VALUES (?,?,?,?,?,?,?)",(int(self.year.currentText()),kind,*vals,f"{amount.value():.2f}"))
    db.commit();dialog.accept();self.mode.setCurrentText(kind);self.load()
   save.clicked.connect(commit);dialog.exec()
- def apply_search(self):
+ def reset_filters(self):
+  self.search.clear();self.date_filter.clear();self.month_filter.setCurrentIndex(0)
+ def apply_search(self,*args):
   needle=self.search.text().strip().casefold()
+  date_needle=self.date_filter.text().strip()
+  month=self.month_filter.currentIndex()
+  mode=self.mode.currentText()
+  visible_count=0
   for i in range(self.table.rowCount()):
-   visible=not needle or any(needle in (self.table.item(i,j).text().casefold() if self.table.item(i,j) else "") for j in range(self.table.columnCount()))
+   cells=[self.table.item(i,j).text() if self.table.item(i,j) else "" for j in range(self.table.columnCount())]
+   matches_text=not needle or any(needle in cell.casefold() for cell in cells)
+   matches_date=not date_needle or (mode!="Anëtarësia" and bool(cells) and date_needle in cells[0])
+   matches_month=month==0
+   if month and mode!="Anëtarësia" and cells:
+    try:
+     date=datetime.datetime.strptime(cells[0],"%d.%m.%Y")
+     matches_month=date.month==month
+    except ValueError:
+     try:
+      date=datetime.datetime.strptime(cells[0],"%Y-%m-%d")
+      matches_month=date.month==month
+     except ValueError:matches_month=False
+   if month and mode=="Anëtarësia":
+    from seed_data import euros
+    matches_month=len(cells)>month+3 and euros(cells[month+3])>0
+   visible=matches_text and matches_date and matches_month
    self.table.setRowHidden(i,not visible)
+   visible_count+=int(visible)
+  if hasattr(self,"statusBar"):self.statusBar().showMessage(f"{visible_count} nga {self.table.rowCount()} regjistrime · {mode} · {self.year.currentText()}")
  def navigate(self,name):
   if name in ("Anëtarësia","Hyrjet","Daljet"):
+   self.reset_filters()
    self.mode.setCurrentText(name)
    self.dashboard.setVisible(False)
   elif name=="Ballina":
