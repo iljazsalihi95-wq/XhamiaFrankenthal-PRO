@@ -1,7 +1,8 @@
-import sys, sqlite3, os, shutil, datetime, hashlib, hmac
+import sys, sqlite3, os, shutil, datetime, hashlib, hmac, urllib.request
 from pathlib import Path
 from PySide6.QtWidgets import QApplication,QMainWindow,QWidget,QVBoxLayout,QHBoxLayout,QLabel,QPushButton,QTableWidget,QTableWidgetItem,QComboBox,QFileDialog,QMessageBox,QLineEdit,QDialog,QFormLayout,QFrame,QDoubleSpinBox
-from PySide6.QtCore import Qt, QUrl
+from PySide6.QtCore import Qt, QUrl, QSize
+from PySide6.QtGui import QPixmap, QIcon
 from seed_data import seed
 from finance_reports import report
 from ledger_totals import summary
@@ -18,10 +19,31 @@ db.execute("CREATE TABLE IF NOT EXISTS members(year INTEGER, member_id TEXT, fir
 db.execute("CREATE TABLE IF NOT EXISTS finance(year INTEGER,kind TEXT,date TEXT,description TEXT,method TEXT,category TEXT,amount TEXT)")
 db.commit()
 seed(db)
+LOGO_URL="https://archive.org/download/20260126-152726-0000/20260126_152726_0000.png"
+def mosque_logo():
+ """Cache the mosque's real logo for native Qt controls; no HTML rendering."""
+ cache=ROOT/"mosque_logo.png"
+ if not cache.exists():
+  try:
+   with urllib.request.urlopen(LOGO_URL,timeout=3) as response:
+    data=response.read(2_000_000)
+   if data.startswith(b"\\x89PNG") or data.startswith(b"\\xff\\xd8"):
+    cache.write_bytes(data)
+  except Exception:pass
+ return QPixmap(str(cache)) if cache.exists() else QPixmap()
+
 class Login(QDialog):
  def __init__(self):
   super().__init__();self.setWindowTitle("Xhamia Frankenthal PRO - Hyrja")
-  f=QFormLayout(self);self.u=QLineEdit();self.p=QLineEdit();self.p.setEchoMode(QLineEdit.Password);f.addRow("Përdoruesi",self.u);f.addRow("Fjalëkalimi",self.p)
+  self.setMinimumWidth(440)
+  f=QFormLayout(self)
+  emblem=QLabel();emblem.setAlignment(Qt.AlignCenter)
+  picture=mosque_logo()
+  if not picture.isNull():emblem.setPixmap(picture.scaled(150,150,Qt.KeepAspectRatio,Qt.SmoothTransformation));self.setWindowIcon(QIcon(picture))
+  else:emblem.setText("XHAMIA FRANKENTHAL")
+  f.addRow(emblem)
+  caption=QLabel("SISTEMI I ADMINISTRIMIT  •  WINDOWS");caption.setAlignment(Qt.AlignCenter);f.addRow(caption)
+  self.u=QLineEdit();self.p=QLineEdit();self.p.setEchoMode(QLineEdit.Password);f.addRow("Përdoruesi",self.u);f.addRow("Fjalëkalimi",self.p)
   b=QPushButton("Hyr");b.clicked.connect(self.check);f.addRow(b)
  def check(self):
   if self.u.text()=="XhamiaFrankenthal" and hmac.compare_digest(hashlib.sha256(self.p.text().encode()).hexdigest(),"4590c57bbe71fba3b0b4586e439d54f410eca68a7e1e17ba8f0f16b129d02b6f"):self.accept()
@@ -29,12 +51,19 @@ class Login(QDialog):
 class Main(QMainWindow):
  def __init__(self):
   super().__init__();self.setWindowTitle("Xhamia Frankenthal PRO");self.resize(1200,760)
+  pic=mosque_logo()
+  if not pic.isNull():self.setWindowIcon(QIcon(pic))
   w=QWidget();self.setCentralWidget(w);v=QVBoxLayout(w)
+  v.setContentsMargins(22,16,22,18);v.setSpacing(14)
   title=QLabel("XHAMIA FRANKENTHAL PRO");title.setAlignment(Qt.AlignCenter);title.setStyleSheet("font-size:26px;font-weight:bold;color:#d5b46b");v.addWidget(title)
   body=QHBoxLayout();v.addLayout(body,1)
   sidebar=QFrame();sidebar.setObjectName("sidebar");sidebar.setFixedWidth(210)
   nav=QVBoxLayout(sidebar);nav.setContentsMargins(12,20,12,16);nav.setSpacing(10)
-  brand=QLabel("ISLAMISCHER VEREIN FRANKENTHAL e.V.");brand.setWordWrap(True);brand.setAlignment(Qt.AlignCenter);brand.setStyleSheet("color:#e2c47c;font-weight:bold;font-size:13px");nav.addWidget(brand)
+  logo=QLabel();logo.setAlignment(Qt.AlignCenter);logo.setMinimumHeight(118)
+  if not pic.isNull():logo.setPixmap(pic.scaled(112,112,Qt.KeepAspectRatio,Qt.SmoothTransformation))
+  else:logo.setText("IVF")
+  nav.addWidget(logo)
+  brand=QLabel("ISLAMISCHER VEREIN\\nFRANKENTHAL e.V.");brand.setWordWrap(True);brand.setAlignment(Qt.AlignCenter);brand.setStyleSheet("color:#e2c47c;font-weight:bold;font-size:13px");nav.addWidget(brand)
   for name in ("Ballina","Anëtarësia","Hyrjet","Daljet","Bilanci","Dëftesat","Hudbe & Derse"):
    button=QPushButton(name);button.setMinimumHeight(42)
    button.clicked.connect(lambda checked=False,n=name:self.navigate(n))
@@ -49,22 +78,22 @@ class Main(QMainWindow):
   self.year=QComboBox();self.year.addItems([str(x) for x in range(2015,2051)]);self.year.setCurrentText("2026");bar.addWidget(self.year)
   for label,func in [("Importo CSV",self.import_csv),("Eksporto PDF",self.pdf),("Backup",self.backup),("Dëftesë PDF",self.receipt_pdf),("Raport financiar A4",self.financial_pdf),("Rifresko",self.load)]:
    b=QPushButton(label);b.clicked.connect(func);bar.addWidget(b)
-  self.dashboard=QLabel("ADMINISTRIMI I XHAMISË  •  Regjistrime dhe llogaritje automatike")
-  self.dashboard.setAlignment(Qt.AlignCenter);self.dashboard.setStyleSheet("font-size:18px;color:#e2c47c;padding:16px")
+  self.dashboard=QLabel("SISTEMI I INTEGRUAR I ADMINISTRIMIT\\nAnëtarësia  •  Financat  •  Dokumentet  •  Arkiva")
+  self.dashboard.setAlignment(Qt.AlignCenter);self.dashboard.setMinimumHeight(92);self.dashboard.setStyleSheet("font-size:20px;font-weight:600;color:#e2c47c;padding:20px;border:1px solid #9e824c;border-radius:15px;background:#10313b")
   work.addWidget(self.dashboard)
   actions=QHBoxLayout();work.addLayout(actions)
   for label,callback in (("Shto anëtar",self.add_member),("Bart anëtarët në vitin pasues",self.rollover_members),("Regjistro hyrje",lambda:self.add_transaction("Hyrjet")),("Regjistro dalje",lambda:self.add_transaction("Daljet"))):
    btn=QPushButton(label);btn.clicked.connect(callback);actions.addWidget(btn)
   self.summary_label=QLabel("Raport nga të dhënat e importuara — pa rakordim bankar");work.addWidget(self.summary_label)
-  self.table=QTableWidget();self.table.setAlternatingRowColors(True);work.addWidget(self.table,3);self.mode.currentIndexChanged.connect(self.load);self.year.currentIndexChanged.connect(self.load)
+  self.table=QTableWidget();self.table.setAlternatingRowColors(True);self.table.setMinimumHeight(390);self.table.verticalHeader().setDefaultSectionSize(34);work.addWidget(self.table,3);self.mode.currentIndexChanged.connect(self.load);self.year.currentIndexChanged.connect(self.load)
   self.setStyleSheet("""
 QMainWindow,QWidget{background:#081d28;color:#f2f7f5;font-family:'Segoe UI';font-size:13px}
 QFrame#sidebar{background:#0e3039;border:1px solid #a28b54;border-radius:16px} QPushButton{background:#174c55;border:1px solid #b69b57;border-radius:8px;padding:10px;color:#f6e7b5;font-weight:600}
 QPushButton:hover{background:#246a70}
 QComboBox,QLineEdit{background:#143642;border:1px solid #42616a;border-radius:7px;padding:8px;color:white}
-QTableWidget{background:#102c38;alternate-background-color:#173843;gridline-color:#36535b;selection-background-color:#276b6e}
-QHeaderView::section{background:#18515a;color:#f3dfab;padding:8px;border:0}
-QScrollBar{background:#102c38}
+QTableWidget{font-size:14px;background:#102c38;alternate-background-color:#173843;gridline-color:#36535b;selection-background-color:#276b6e}
+QHeaderView::section{background:#18515a;color:#f3dfab;padding:11px;border:0;font-weight:bold}
+QScrollBar{background:#102c38}\nQDialog{background:#081d28;color:#f2f7f5}
 """)
   self.search.textChanged.connect(self.apply_search)
   self.load()
