@@ -3,7 +3,8 @@ from pathlib import Path
 from PySide6.QtWidgets import QApplication,QMainWindow,QWidget,QVBoxLayout,QHBoxLayout,QLabel,QPushButton,QTableWidget,QTableWidgetItem,QComboBox,QFileDialog,QMessageBox,QLineEdit,QDialog,QFormLayout,QFrame,QDoubleSpinBox
 from PySide6.QtCore import Qt, QUrl
 from seed_data import seed
-from finance_reports import summary, report
+from finance_reports import report
+from ledger_totals import summary
 from receipts import create_receipt
 from reportlab.platypus import SimpleDocTemplate,Table,TableStyle,Paragraph
 from reportlab.lib import colors
