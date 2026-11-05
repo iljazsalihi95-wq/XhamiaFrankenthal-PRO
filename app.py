@@ -149,7 +149,7 @@ QScrollBar{background:#102c38}\nQDialog{background:#081d28;color:#f2f7f5}
   elif name=="Ballina":
    self.dashboard.setVisible(True)
   elif name=="Bilanci":
-   self.financial_pdf()
+   self.show_balance()
   elif name=="Dëftesat":
    self.receipt_pdf()
   elif name=="Hudbe & Derse":
@@ -205,6 +205,34 @@ QScrollBar{background:#102c38}\nQDialog{background:#081d28;color:#f2f7f5}
    d=totals[mode]
    self.summary_label.setText(f"{mode} {y}: Cash {d['cash']/100:,.2f} € | Bank {d['bank']/100:,.2f} € | Të paklasifikuara {d['other']/100:,.2f} € | Përjashtuar {d['excluded']} rreshta")
   else:self.summary_label.setText(f"Anëtarësia {y}: {len(rows)} rreshta nga burimi zyrtar")
+ def show_balance(self):
+  y=int(self.year.currentText())
+  from ledger_totals import summary as balance_summary
+  try:
+   values=balance_summary(db,y)
+   incoming=values["Hyrjet"];outgoing=values["Daljet"]
+   cash=incoming["cash"]-outgoing["cash"]
+   bank=incoming["bank"]-outgoing["bank"]
+   total=cash+bank
+   details=QDialog(self);details.setWindowTitle(f"Bilanci ndër vite — {y}");details.resize(850,560)
+   layout=QVBoxLayout(details)
+   title=QLabel(f"BILANCI VJETOR {y}");title.setAlignment(Qt.AlignCenter)
+   title.setStyleSheet("font-size:24px;color:#e2c47c;font-weight:bold;padding:16px")
+   layout.addWidget(title)
+   grid=QTableWidget(3,4)
+   grid.setHorizontalHeaderLabels(["Llogaria","Hyrjet","Daljet","Diferenca"])
+   for i,(label,inc,out) in enumerate((("Cash",incoming["cash"],outgoing["cash"]),("Bank",incoming["bank"],outgoing["bank"]),("Gjithsej",incoming["cash"]+incoming["bank"],outgoing["cash"]+outgoing["bank"]))):
+    for j,value in enumerate((label,f"{inc/100:,.2f} €",f"{out/100:,.2f} €",f"{(inc-out)/100:,.2f} €")):
+     grid.setItem(i,j,QTableWidgetItem(value))
+   grid.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+   layout.addWidget(grid)
+   notice=QLabel("Diferencat janë lëvizje të regjistruara, jo domosdoshmërisht gjendja reale e bankës.\\nGjendjet fillestare dhe rakordimet duhet të kontrollohen veçmas.")
+   notice.setWordWrap(True);layout.addWidget(notice)
+   buttons=QHBoxLayout();layout.addLayout(buttons)
+   export=QPushButton("Eksporto raportin PDF");export.clicked.connect(self.financial_pdf);buttons.addWidget(export)
+   close=QPushButton("Mbyll");close.clicked.connect(details.accept);buttons.addWidget(close)
+   details.exec()
+  except Exception as exc:QMessageBox.critical(self,"Bilanci",str(exc))
  def receipt_pdf(self):
   mode=self.mode.currentText()
   i=self.table.currentRow()
