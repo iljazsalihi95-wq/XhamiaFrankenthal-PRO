@@ -33,7 +33,8 @@ def summary(db,year):
     return result
 
 def report(db,year,path):
-    s=summary(db,year)
+    from ledger_totals import summary as combined_summary
+    s=combined_summary(db,year)
     font=font_setup()
     styles=getSampleStyleSheet()
     for k in ("Normal","Title","Heading2"):styles[k].fontName=font
