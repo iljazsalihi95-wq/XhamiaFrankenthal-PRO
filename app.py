@@ -125,15 +125,21 @@ QScrollBar{background:#102c38}\nQDialog{background:#081d28;color:#f2f7f5}
  def add_transaction(self,kind):
   dialog=QDialog(self);dialog.setWindowTitle("Regjistro "+kind);form=QFormLayout(dialog)
   fields=[]
-  for label in ("Data (DD.MM.VVVV)","Përshkrimi","Metoda (Cash/Bank)","Kategoria"):
-   field=QLineEdit();form.addRow(label,field);fields.append(field)
+  date=QLineEdit(datetime.date.today().strftime("%d.%m.%Y"));date.setPlaceholderText("DD.MM.VVVV")
+  description=QLineEdit();description.setPlaceholderText("Përshkrimi i transaksionit")
+  method=QComboBox();method.addItems(["Cash","Bank"])
+  category=QComboBox();category.setEditable(True)
+  categories=(["Anëtarësia","Donacion","Sadaka","Zekat","Fitër","Kurban","Aktivitete","Të ardhura të tjera"] if kind=="Hyrjet" else ["Qira","Rroga","Nebenkosten","Energji","Ujë","Mirëmbajtje","Pajisje","Aktivitete","Shpenzime të tjera"])
+  category.addItems(categories)
+  for label,widget in (("Data",date),("Përshkrimi",description),("Mënyra e pagesës",method),("Lloji / Kategoria",category)):
+   form.addRow(label,widget)
   amount=QDoubleSpinBox();amount.setMaximum(10000000);amount.setDecimals(2);amount.setSuffix(" €");form.addRow("Shuma",amount)
   save=QPushButton("Ruaj regjistrimin");form.addRow(save)
   def commit():
-   vals=[x.text().strip() for x in fields]
+   vals=[date.text().strip(),description.text().strip(),method.currentText(),category.currentText().strip()]
    try:datetime.datetime.strptime(vals[0],"%d.%m.%Y")
    except ValueError:QMessageBox.warning(dialog,"Data","Përdor DD.MM.VVVV");return
-   if not vals[1] or vals[2].lower() not in ("cash","bank"):QMessageBox.warning(dialog,"Kontroll","Plotëso përshkrimin dhe Cash/Bank.");return
+   if not vals[1] or not vals[3] or amount.value()<=0:QMessageBox.warning(dialog,"Kontroll","Plotëso përshkrimin, kategorinë dhe shumën më të madhe se zero.");return
    db.execute("INSERT INTO finance VALUES (?,?,?,?,?,?,?)",(int(self.year.currentText()),kind,*vals,f"{amount.value():.2f}"))
    db.commit();dialog.accept();self.mode.setCurrentText(kind);self.load()
   save.clicked.connect(commit);dialog.exec()
