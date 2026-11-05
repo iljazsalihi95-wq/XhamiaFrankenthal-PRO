@@ -90,7 +90,7 @@ class Main(QMainWindow):
   else:logo.setText("IVF")
   nav.addWidget(logo)
   brand=QLabel("ISLAMISCHER VEREIN\\nFRANKENTHAL e.V.");brand.setWordWrap(True);brand.setAlignment(Qt.AlignCenter);brand.setStyleSheet("color:#e2c47c;font-weight:bold;font-size:13px");nav.addWidget(brand)
-  for name in ("Ballina","Anëtarësia","Hyrjet","Daljet","Bilanci","Dëftesat","Hudbe & Derse"):
+  for name in ("Ballina","Anëtarësia","Hyrjet","Daljet","Bilanci","Dëftesat","Hudbe & Derse","Historiku","Rregullorja","Mbledhjet","Procesverbalet"):
    icons={"Ballina":"⌂","Anëtarësia":"♟","Hyrjet":"↘","Daljet":"↗","Bilanci":"▥","Dëftesat":"▤","Hudbe & Derse":"▣"}
    button=QPushButton(icons.get(name,"◆")+"   "+name);button.setObjectName("navButton");button.setMinimumHeight(50)
    button.clicked.connect(lambda checked=False,n=name:self.navigate(n))
@@ -225,6 +225,64 @@ QStatusBar{background:#082d55;color:white;font-weight:bold}
    self.receipt_pdf()
   elif name=="Hudbe & Derse":
    QMessageBox.information(self,"Arkiva","Arkiva e plotë e hutbeve dhe derseve nuk është importuar ende.")
+  elif name in ("Historiku","Rregullorja","Mbledhjet","Procesverbalet"):
+   self.open_documents(name)
+ def open_documents(self,section):
+  """Editable mosque archive stored locally, with no placeholder-only buttons."""
+  db.execute("CREATE TABLE IF NOT EXISTS mosque_documents (id INTEGER PRIMARY KEY AUTOINCREMENT, section TEXT NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL, created_at TEXT NOT NULL)")
+  db.commit()
+  from PySide6.QtWidgets import QListWidget,QTextEdit,QSplitter
+  dialog=QDialog(self);dialog.setWindowTitle(section+" — Xhamia Frankenthal PRO");dialog.resize(1000,690)
+  layout=QVBoxLayout(dialog)
+  heading=QLabel(section.upper());heading.setStyleSheet("font-size:24px;font-weight:900;color:#07508a");layout.addWidget(heading)
+  split=QSplitter(Qt.Horizontal);layout.addWidget(split,1)
+  listing=QListWidget();listing.setMinimumWidth(270);split.addWidget(listing)
+  editor=QWidget();form=QVBoxLayout(editor);split.addWidget(editor)
+  title=QLineEdit();title.setPlaceholderText("Titulli i dokumentit");form.addWidget(title)
+  body=QTextEdit();body.setPlaceholderText("Shkruaj tekstin e plotë të dokumentit ose procesverbalit...");form.addWidget(body,1)
+  toolbar=QHBoxLayout();form.addLayout(toolbar)
+  current=[None]
+  def refresh():
+   listing.clear()
+   records=db.execute("SELECT id,title FROM mosque_documents WHERE section=? ORDER BY id DESC",(section,)).fetchall()
+   for doc_id,doc_title in records:
+    from PySide6.QtWidgets import QListWidgetItem
+    item=QListWidgetItem(doc_title);item.setData(Qt.UserRole,doc_id);listing.addItem(item)
+  def choose(item):
+   current[0]=item.data(Qt.UserRole)
+   row=db.execute("SELECT title,body FROM mosque_documents WHERE id=?",(current[0],)).fetchone()
+   if row:title.setText(row[0]);body.setPlainText(row[1])
+  def new():
+   current[0]=None;listing.clearSelection();title.clear();body.clear()
+  def save():
+   t=title.text().strip();b=body.toPlainText().strip()
+   if not t or not b:
+    QMessageBox.warning(dialog,"Dokumenti","Titulli dhe përmbajtja janë të detyrueshme.");return
+   if current[0]:
+    db.execute("UPDATE mosque_documents SET title=?,body=? WHERE id=? AND section=?",(t,b,current[0],section))
+   else:
+    cur=db.execute("INSERT INTO mosque_documents(section,title,body,created_at) VALUES (?,?,?,?)",(section,t,b,datetime.datetime.now().isoformat()))
+    current[0]=cur.lastrowid
+   db.commit();refresh();QMessageBox.information(dialog,"U ruajt","Dokumenti u ruajt në arkivën lokale.")
+  def export():
+   if not title.text().strip():QMessageBox.warning(dialog,"PDF","Zgjidh dokumentin.");return
+   path,_=QFileDialog.getSaveFileName(dialog,"Ruaj dokumentin",section+".pdf","PDF (*.pdf)")
+   if not path:return
+   from reportlab.platypus import Spacer
+   from reportlab.lib.styles import ParagraphStyle
+   from reportlab.lib.enums import TA_LEFT
+   from xml.sax.saxutils import escape
+   doc=SimpleDocTemplate(path,pagesize=A4)
+   styles=getSampleStyleSheet()
+   elements=[Paragraph(escape(title.text()),styles["Heading1"]),Spacer(1,16)]
+   for line in body.toPlainText().splitlines():
+    elements.append(Paragraph(escape(line) or " ",styles["Normal"]))
+    elements.append(Spacer(1,6))
+   doc.build(elements)
+  for label,callback in (("Dokument i ri",new),("Ruaj ndryshimet",save),("Eksporto PDF",export)):
+   button=QPushButton(label);button.clicked.connect(callback);toolbar.addWidget(button)
+  listing.itemClicked.connect(choose)
+  refresh();dialog.exec()
  def load(self):
   y=int(self.year.currentText());mode=self.mode.currentText()
   if mode=="Anëtarësia":
