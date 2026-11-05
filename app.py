@@ -78,14 +78,14 @@ class Login(QDialog):
   else:QMessageBox.warning(self,"Gabim","Kredencialet nuk përputhen")
 class Main(QMainWindow):
  def __init__(self):
-  super().__init__();self.setWindowTitle("Xhamia Frankenthal PRO");self.resize(1200,760)
+  super().__init__();self.setWindowTitle("Xhamia Frankenthal PRO");self.resize(1500,880);self.setMinimumSize(1120,700)
   pic=mosque_logo()
   if not pic.isNull():self.setWindowIcon(QIcon(pic))
   w=QWidget();self.setCentralWidget(w);v=QVBoxLayout(w)
   v.setContentsMargins(22,16,22,18);v.setSpacing(14)
-  title=QLabel("XHAMIA FRANKENTHAL PRO");title.setAlignment(Qt.AlignCenter);title.setStyleSheet("font-size:26px;font-weight:bold;color:#d5b46b");v.addWidget(title)
+  title=QLabel("✦  XHAMIA FRANKENTHAL PRO  ✦");title.setObjectName("heroTitle");title.setAlignment(Qt.AlignCenter);title.setMinimumHeight(92);v.addWidget(title)
   body=QHBoxLayout();v.addLayout(body,1)
-  sidebar=QFrame();sidebar.setObjectName("sidebar");sidebar.setFixedWidth(210)
+  sidebar=QFrame();sidebar.setObjectName("sidebar");sidebar.setFixedWidth(240)
   nav=QVBoxLayout(sidebar);nav.setContentsMargins(12,20,12,16);nav.setSpacing(10)
   logo=QLabel();logo.setAlignment(Qt.AlignCenter);logo.setMinimumHeight(118)
   if not pic.isNull():logo.setPixmap(pic.scaled(112,112,Qt.KeepAspectRatio,Qt.SmoothTransformation))
@@ -93,7 +93,8 @@ class Main(QMainWindow):
   nav.addWidget(logo)
   brand=QLabel("ISLAMISCHER VEREIN\\nFRANKENTHAL e.V.");brand.setWordWrap(True);brand.setAlignment(Qt.AlignCenter);brand.setStyleSheet("color:#e2c47c;font-weight:bold;font-size:13px");nav.addWidget(brand)
   for name in ("Ballina","Anëtarësia","Hyrjet","Daljet","Bilanci","Dëftesat","Hudbe & Derse"):
-   button=QPushButton(name);button.setMinimumHeight(42)
+   icons={"Ballina":"⌂","Anëtarësia":"♟","Hyrjet":"↘","Daljet":"↗","Bilanci":"▥","Dëftesat":"▤","Hudbe & Derse":"▣"}
+   button=QPushButton(icons.get(name,"◆")+"   "+name);button.setObjectName("navButton");button.setMinimumHeight(50)
    button.clicked.connect(lambda checked=False,n=name:self.navigate(n))
    nav.addWidget(button)
   nav.addStretch()
@@ -110,21 +111,30 @@ class Main(QMainWindow):
   for label,func in [("Importo CSV",self.import_csv),("Eksporto PDF",self.pdf),("Backup",self.backup),("Dëftesë PDF",self.receipt_pdf),("Raport financiar A4",self.financial_pdf),("Rifresko",self.load)]:
    b=QPushButton(label);b.clicked.connect(func);bar.addWidget(b)
   self.dashboard=QLabel("SISTEMI I INTEGRUAR I ADMINISTRIMIT\\nAnëtarësia  •  Financat  •  Dokumentet  •  Arkiva")
-  self.dashboard.setAlignment(Qt.AlignCenter);self.dashboard.setMinimumHeight(92);self.dashboard.setStyleSheet("font-size:20px;font-weight:600;color:#e2c47c;padding:20px;border:1px solid #9e824c;border-radius:15px;background:#10313b")
+  self.dashboard.setAlignment(Qt.AlignCenter);self.dashboard.setMinimumHeight(92);self.dashboard.setStyleSheet("font-size:22px;font-weight:800;color:#f4d27a;padding:20px;border:2px solid #c99c3b;border-radius:15px;background:#073d68")
   work.addWidget(self.dashboard)
   actions=QHBoxLayout();work.addLayout(actions)
   for label,callback in (("Shto anëtar",self.add_member),("Bart anëtarët në vitin pasues",self.rollover_members),("Regjistro hyrje",lambda:self.add_transaction("Hyrjet")),("Regjistro dalje",lambda:self.add_transaction("Daljet"))):
    btn=QPushButton(label);btn.clicked.connect(callback);actions.addWidget(btn)
   self.summary_label=QLabel("Raport nga të dhënat e importuara — pa rakordim bankar");work.addWidget(self.summary_label)
-  self.table=QTableWidget();self.table.setAlternatingRowColors(True);self.table.setMinimumHeight(390);self.table.verticalHeader().setDefaultSectionSize(34);self.table.verticalHeader().setVisible(False);self.table.setWordWrap(False);work.addWidget(self.table,3);self.mode.currentIndexChanged.connect(self.load);self.year.currentIndexChanged.connect(self.load)
+  self.table=QTableWidget();self.table.setAlternatingRowColors(True);self.table.setMinimumHeight(390);self.table.verticalHeader().setDefaultSectionSize(43);self.table.verticalHeader().setVisible(False);self.table.setWordWrap(False);work.addWidget(self.table,3);self.mode.currentIndexChanged.connect(self.load);self.year.currentIndexChanged.connect(self.load)
   self.setStyleSheet("""
-QMainWindow,QWidget{background:#081d28;color:#f2f7f5;font-family:'Segoe UI';font-size:13px}
-QFrame#sidebar{background:#0e3039;border:1px solid #a28b54;border-radius:16px} QPushButton{background:#174c55;border:1px solid #b69b57;border-radius:8px;padding:10px;color:#f6e7b5;font-weight:600}
-QPushButton:hover{background:#246a70}
-QComboBox,QLineEdit{background:#143642;border:1px solid #42616a;border-radius:7px;padding:8px;color:white}
-QTableWidget{font-size:14px;background:#102c38;alternate-background-color:#173843;gridline-color:#36535b;selection-background-color:#276b6e}
-QHeaderView::section{background:#18515a;color:#f3dfab;padding:11px;border:0;font-weight:bold}
-QScrollBar{background:#102c38}\nQDialog{background:#081d28;color:#f2f7f5}
+QMainWindow,QWidget{background:#eaf2fc;color:#102d50;font-family:'Segoe UI';font-size:13px}
+QLabel#heroTitle{background:qlineargradient(x1:0,y1:0,x2:1,y2:0,stop:0 #052744,stop:.48 #075082,stop:1 #10345d);color:#f6d47e;font-size:30px;font-weight:900;border-bottom:4px solid #d5a83c;border-radius:14px;padding:16px}
+QFrame#sidebar{background:#082d55;border:2px solid #d4ae55;border-radius:17px}
+QFrame#sidebar QLabel{background:transparent;color:#f3d17c}
+QPushButton{background:#0864a2;border:1px solid #75b4e1;border-radius:10px;padding:11px;color:white;font-weight:700;font-size:13px;min-height:20px}
+QPushButton:hover{background:#1883cc;border-color:#f0bf55}
+QPushButton#navButton{background:#064373;text-align:left;padding-left:19px;font-size:15px;min-height:30px;border:1px solid #4da4d9}
+QPushButton#navButton:hover{background:#d8a02d;color:#082e50}
+QComboBox,QLineEdit{background:#fff;border:2px solid #a3c6e4;border-radius:9px;padding:9px;color:#10365b;min-height:22px}
+QTableWidget{font-size:14px;background:#fff;alternate-background-color:#dceafb;gridline-color:#bfd5ec;selection-background-color:#86c5f3;selection-color:#06284b;border:2px solid #a7c8e5;border-radius:12px}
+QTableWidget::item{padding:7px}
+QHeaderView::section{background:#07508a;color:white;padding:12px;border:1px solid #3375a5;font-weight:bold;font-size:14px}
+QScrollBar:vertical{background:#d8e8f8;width:14px}
+QScrollBar::handle:vertical{background:#6d9ec4;border-radius:6px;min-height:24px}
+QDialog{background:#eaf2fc;color:#102d50}
+QStatusBar{background:#082d55;color:white;font-weight:bold}
 """)
   self.search.textChanged.connect(self.apply_search)
   self.month_filter.currentIndexChanged.connect(self.apply_search)
