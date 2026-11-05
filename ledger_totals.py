@@ -18,10 +18,15 @@ def summary(db, year):
             "SELECT description, account, category, amount_cents, included FROM source_finance WHERE source_sheet=?",
             (sheet,)
         ).fetchall()
-        manual = db.execute(
-            "SELECT description, method, category, amount FROM finance WHERE year=? AND kind=?",
-            (year, kind)
-        ).fetchall()
+        try:
+            manual = db.execute(
+                "SELECT description, method, category, amount FROM finance WHERE year=? AND kind=?",
+                (year, kind)
+            ).fetchall()
+        except Exception as exc:
+            if "no such table: finance" not in str(exc):
+                raise
+            manual = []
         records = list(source) + [(a, b, c, cents(d), "Po") for a,b,c,d in manual]
         result = {"count": 0, "cash": 0, "bank": 0, "other": 0, "excluded": 0}
         for description, method, category, amount, included in records:
