@@ -206,16 +206,47 @@ QScrollBar{background:#102c38}\nQDialog{background:#081d28;color:#f2f7f5}
    self.summary_label.setText(f"{mode} {y}: Cash {d['cash']/100:,.2f} € | Bank {d['bank']/100:,.2f} € | Të paklasifikuara {d['other']/100:,.2f} € | Përjashtuar {d['excluded']} rreshta")
   else:self.summary_label.setText(f"Anëtarësia {y}: {len(rows)} rreshta nga burimi zyrtar")
  def receipt_pdf(self):
-  if self.mode.currentText()!="Hyrjet":
-   QMessageBox.warning(self,"Dëftesa","Zgjidh rubrikën Hyrjet.");return
+  mode=self.mode.currentText()
   i=self.table.currentRow()
   if i<0:
-   QMessageBox.warning(self,"Dëftesa","Zgjidh një pagesë në tabelë.");return
+   QMessageBox.warning(self,"Dëftesa","Zgjidh një anëtar ose një pagesë në tabelë.");return
+  year=self.year.currentText()
+  if mode=="Anëtarësia":
+   name=" ".join(self.table.item(i,j).text() for j in (1,2) if self.table.item(i,j))
+   months=["Janar","Shkurt","Mars","Prill","Maj","Qershor","Korrik","Gusht","Shtator","Tetor","Nëntor","Dhjetor"]
+   paid=[]
+   for month in range(12):
+    item=self.table.item(i,month+4)
+    raw=item.text().strip() if item else ""
+    from seed_data import euros
+    if euros(raw)>0:paid.append((months[month],raw))
+   if not paid:
+    QMessageBox.information(self,"Dëftesa","Ky anëtar nuk ka pagesa të regjistruara për këtë vit.");return
+   choose=QDialog(self);choose.setWindowTitle("Dëftesë anëtarësie")
+   form=QFormLayout(choose)
+   person=QLabel(name+" — "+year);form.addRow("Anëtari",person)
+   month_select=QComboBox()
+   for month,amount in paid:month_select.addItem(f"{month}: {amount}",(month,amount))
+   form.addRow("Pagesa",month_select)
+   confirm=QPushButton("Krijo PDF");form.addRow(confirm);confirm.clicked.connect(choose.accept)
+   if choose.exec()!=QDialog.Accepted:return
+   month,amount=month_select.currentData()
+   fields=[month+" "+year,name,"Anëtarësia",amount]
+   from receipts import create_membership_receipt
+   p,_=QFileDialog.getSaveFileName(self,"Ruaj dëftesën",f"Deftese_{year}_{month}.pdf","PDF (*.pdf)")
+   if not p:return
+   try:
+    create_membership_receipt(p,year,name,month,amount)
+    QMessageBox.information(self,"Dëftesa","Dëftesa e anëtarësisë u ruajt si PDF.")
+   except Exception as exc:QMessageBox.critical(self,"Dëftesa",str(exc))
+   return
+  if mode!="Hyrjet":
+   QMessageBox.information(self,"Dëftesa","Për dëftesë hyrjeje zgjidh një regjistrim te Hyrjet.");return
   fields=[self.table.item(i,j).text() if self.table.item(i,j) else "" for j in range(5)]
   p,_=QFileDialog.getSaveFileName(self,"Ruaj dëftesën","Deftese_Xhamia.pdf","PDF (*.pdf)")
   if not p:return
   try:
-   create_receipt(p,self.year.currentText(),fields)
+   create_receipt(p,year,fields)
    QMessageBox.information(self,"Dëftesa","PDF u ruajt.")
   except Exception as e:QMessageBox.critical(self,"Dëftesa",str(e))
  def financial_pdf(self):
