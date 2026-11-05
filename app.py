@@ -3,6 +3,7 @@ from pathlib import Path
 from PySide6.QtWidgets import QApplication,QMainWindow,QWidget,QVBoxLayout,QHBoxLayout,QLabel,QPushButton,QTableWidget,QTableWidgetItem,QComboBox,QFileDialog,QMessageBox,QLineEdit,QDialog,QFormLayout,QFrame,QDoubleSpinBox
 from PySide6.QtCore import Qt, QUrl, QSize
 from PySide6.QtGui import QPixmap, QIcon
+from PySide6.QtWidgets import QHeaderView
 from seed_data import seed
 from finance_reports import report
 from ledger_totals import summary
@@ -85,7 +86,7 @@ class Main(QMainWindow):
   for label,callback in (("Shto anëtar",self.add_member),("Bart anëtarët në vitin pasues",self.rollover_members),("Regjistro hyrje",lambda:self.add_transaction("Hyrjet")),("Regjistro dalje",lambda:self.add_transaction("Daljet"))):
    btn=QPushButton(label);btn.clicked.connect(callback);actions.addWidget(btn)
   self.summary_label=QLabel("Raport nga të dhënat e importuara — pa rakordim bankar");work.addWidget(self.summary_label)
-  self.table=QTableWidget();self.table.setAlternatingRowColors(True);self.table.setMinimumHeight(390);self.table.verticalHeader().setDefaultSectionSize(34);work.addWidget(self.table,3);self.mode.currentIndexChanged.connect(self.load);self.year.currentIndexChanged.connect(self.load)
+  self.table=QTableWidget();self.table.setAlternatingRowColors(True);self.table.setMinimumHeight(390);self.table.verticalHeader().setDefaultSectionSize(34);self.table.verticalHeader().setVisible(False);self.table.setWordWrap(False);work.addWidget(self.table,3);self.mode.currentIndexChanged.connect(self.load);self.year.currentIndexChanged.connect(self.load)
   self.setStyleSheet("""
 QMainWindow,QWidget{background:#081d28;color:#f2f7f5;font-family:'Segoe UI';font-size:13px}
 QFrame#sidebar{background:#0e3039;border:1px solid #a28b54;border-radius:16px} QPushButton{background:#174c55;border:1px solid #b69b57;border-radius:8px;padding:10px;color:#f6e7b5;font-weight:600}
@@ -182,7 +183,21 @@ QScrollBar{background:#102c38}\nQDialog{background:#081d28;color:#f2f7f5}
   self.table.setColumnCount(len(heads));self.table.setHorizontalHeaderLabels(heads);self.table.setRowCount(len(rows))
   for i,row in enumerate(rows):
    for j,val in enumerate(row):self.table.setItem(i,j,QTableWidgetItem(str(val or "")))
-  self.table.resizeColumnsToContents()
+  header=self.table.horizontalHeader()
+  header.setMinimumSectionSize(38)
+  header.setStretchLastSection(False)
+  if mode=="Anëtarësia":
+   # Fit all twelve months on screen; identity columns get more space.
+   header.setSectionResizeMode(QHeaderView.Stretch)
+   for column in (0,3):
+    header.setSectionResizeMode(column,QHeaderView.Fixed)
+   self.table.setColumnWidth(0,52)
+   self.table.setColumnWidth(3,55)
+   self.table.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+  else:
+   header.setSectionResizeMode(QHeaderView.Stretch)
+   header.setSectionResizeMode(1,QHeaderView.Interactive)
+   self.table.setColumnWidth(1,280)
   self.apply_search()
   self.statusBar().showMessage(f"{len(rows)} regjistrime · {mode} · {y}")
   if mode!="Anëtarësia":
