@@ -22,16 +22,14 @@ db.commit()
 seed(db)
 LOGO_URL="https://archive.org/download/20260126-152726-0000/20260126_152726_0000.png"
 def mosque_logo():
- """Cache the mosque's real logo for native Qt controls; no HTML rendering."""
+ """Use the packaged official mosque logo offline; cache as fallback."""
+ bundled=Path(getattr(sys,"_MEIPASS",Path(__file__).resolve().parent))/"assets"/"mosque_logo.png"
+ if bundled.exists():
+  image=QPixmap(str(bundled))
+  if not image.isNull():return image
  cache=ROOT/"mosque_logo.png"
- if not cache.exists():
-  try:
-   with urllib.request.urlopen(LOGO_URL,timeout=3) as response:
-    data=response.read(2_000_000)
-   if data.startswith(b"\\x89PNG") or data.startswith(b"\\xff\\xd8"):
-    cache.write_bytes(data)
-  except Exception:pass
- return QPixmap(str(cache)) if cache.exists() else QPixmap()
+ if cache.exists():return QPixmap(str(cache))
+ return QPixmap()
 
 class Login(QDialog):
  def __init__(self):
