@@ -45,7 +45,7 @@ class Main(QMainWindow):
   bar=QHBoxLayout();work.addLayout(bar)
   self.mode=QComboBox();self.mode.addItems(["Anëtarësia","Hyrjet","Daljet"]);bar.addWidget(self.mode)
   self.search=QLineEdit();self.search.setPlaceholderText("Kërko emër, mbiemër, përshkrim...");bar.addWidget(self.search,2)
-  self.year=QComboBox();self.year.addItems([str(x) for x in range(2015,2036)]);self.year.setCurrentText("2026");bar.addWidget(self.year)
+  self.year=QComboBox();self.year.addItems([str(x) for x in range(2015,2051)]);self.year.setCurrentText("2026");bar.addWidget(self.year)
   for label,func in [("Importo CSV",self.import_csv),("Eksporto PDF",self.pdf),("Backup",self.backup),("Dëftesë PDF",self.receipt_pdf),("Raport financiar A4",self.financial_pdf),("Rifresko",self.load)]:
    b=QPushButton(label);b.clicked.connect(func);bar.addWidget(b)
   self.dashboard=QLabel("ADMINISTRIMI I XHAMISË  •  Regjistrime dhe llogaritje automatike")
