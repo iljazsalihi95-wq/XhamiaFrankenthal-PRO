@@ -6,6 +6,7 @@ from seed_data import seed
 from finance_reports import report
 from ledger_totals import summary
 from receipts import create_receipt
+from membership_rollover import carry_forward
 from reportlab.platypus import SimpleDocTemplate,Table,TableStyle,Paragraph
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
@@ -52,7 +53,7 @@ class Main(QMainWindow):
   self.dashboard.setAlignment(Qt.AlignCenter);self.dashboard.setStyleSheet("font-size:18px;color:#e2c47c;padding:16px")
   work.addWidget(self.dashboard)
   actions=QHBoxLayout();work.addLayout(actions)
-  for label,callback in (("Shto anëtar",self.add_member),("Regjistro hyrje",lambda:self.add_transaction("Hyrjet")),("Regjistro dalje",lambda:self.add_transaction("Daljet"))):
+  for label,callback in (("Shto anëtar",self.add_member),("Bart anëtarët në vitin pasues",self.rollover_members),("Regjistro hyrje",lambda:self.add_transaction("Hyrjet")),("Regjistro dalje",lambda:self.add_transaction("Daljet"))):
    btn=QPushButton(label);btn.clicked.connect(callback);actions.addWidget(btn)
   self.summary_label=QLabel("Raport nga të dhënat e importuara — pa rakordim bankar");work.addWidget(self.summary_label)
   self.table=QTableWidget();self.table.setAlternatingRowColors(True);work.addWidget(self.table,3);self.mode.currentIndexChanged.connect(self.load);self.year.currentIndexChanged.connect(self.load)
@@ -67,6 +68,18 @@ QScrollBar{background:#102c38}
 """)
   self.search.textChanged.connect(self.apply_search)
   self.load()
+ def rollover_members(self):
+  source=int(self.year.currentText())
+  if source>=2050:
+   QMessageBox.warning(self,"Vitet","Zgjidh një vit para 2050.");return
+  target=source+1
+  confirm=QMessageBox.question(self,"Bartja e anëtarëve",f"Të barten në {target} vetëm anëtarët që kanë paguar të paktën një muaj gjatë {source}? Pagesat nuk kopjohen.")
+  if confirm!=QMessageBox.Yes:return
+  try:
+   added=carry_forward(db,source,target)
+   self.year.setCurrentText(str(target));self.mode.setCurrentText("Anëtarësia");self.load()
+   QMessageBox.information(self,"Bartja",f"U shtuan {added} anëtarë në {target}. Pagesat e reja janë bosh.")
+  except Exception as exc:QMessageBox.critical(self,"Bartja",str(exc))
  def add_member(self):
   dialog=QDialog(self);dialog.setWindowTitle("Anëtar i ri");form=QFormLayout(dialog)
   inputs=[]
