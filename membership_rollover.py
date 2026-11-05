@@ -26,7 +26,6 @@ def paid_members(db, year):
 def carry_forward(db, from_year, to_year):
     if to_year != from_year+1:
         raise ValueError("Carry-forward is permitted only to the following year")
-    db.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_members_year_identity ON members(year,member_id,first_name,last_name)")
     existing = set((str(a),str(b).casefold(),str(c).casefold()) for a,b,c in
         db.execute("SELECT member_id,first_name,last_name FROM members WHERE year=?",(to_year,)))
     existing.update((str(a),str(b).casefold(),str(c).casefold()) for a,b,c in
