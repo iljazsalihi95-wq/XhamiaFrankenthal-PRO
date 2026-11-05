@@ -1,4 +1,4 @@
-import sys, sqlite3, os, shutil, datetime, hashlib, hmac, urllib.request
+import sys, sqlite3, os, shutil, datetime, hashlib, hmac, urllib.request, json
 from pathlib import Path
 from PySide6.QtWidgets import QApplication,QMainWindow,QWidget,QVBoxLayout,QHBoxLayout,QLabel,QPushButton,QTableWidget,QTableWidgetItem,QComboBox,QFileDialog,QMessageBox,QLineEdit,QDialog,QFormLayout,QFrame,QDoubleSpinBox
 from PySide6.QtCore import Qt, QUrl, QSize
@@ -216,6 +216,29 @@ QScrollBar{background:#102c38}\nQDialog{background:#081d28;color:#f2f7f5}
    sheet=mode if y==2026 else f"{mode} {y}"
    rows=list(db.execute("SELECT date,description,account,category,printf('%.2f €',amount_cents/100.0) FROM source_finance WHERE source_sheet=? ORDER BY source_row",(sheet,)).fetchall())
    rows+=db.execute("SELECT date,description,method,category,amount FROM finance WHERE year=? AND kind=?",(y,mode)).fetchall()
+  if mode=="Hyrjet":
+   def is_membership(row):
+    desc=str(row[1] or "").casefold()
+    cat=str(row[3] or "").casefold()
+    return any(word in (desc+" "+cat) for word in ("anëtarës","antares","pagesë bankare","pagese bankare"))
+   rows=[row for row in rows if not is_membership(row)]
+   path=Path(getattr(sys,"_MEIPASS",Path(__file__).resolve().parent))/"data"/f"{y}.json"
+   if path.exists():
+    membership_rows=json.loads(path.read_text(encoding="utf-8")).get("rows",[])
+    bank_row=next((r for r in membership_rows if r and "paguar përmes bank" in str(r[0]).casefold()),None)
+    cash_row=next((r for r in membership_rows if r and "paguar në kesh" in str(r[0]).casefold()),None)
+    months=("Janar","Shkurt","Mars","Prill","Maj","Qershor","Korrik","Gusht","Shtator","Tetor","Nëntor","Dhjetor")
+    from seed_data import euros
+    for m,month in enumerate(months):
+     for method,source_row in (("Cash",cash_row),("Bank",bank_row)):
+      if source_row and len(source_row)>m+4:
+       amount=euros(source_row[m+4])
+       if amount:
+        rows.append((f"01.{m+1:02d}.{y}",f"Anëtarësia {month} {y} — {method}",method,"Anëtarësia",f"{amount/100:.2f} €"))
+   def row_date(row):
+    try:return datetime.datetime.strptime(str(row[0]),"%d.%m.%Y")
+    except ValueError:return datetime.datetime.min
+   rows.sort(key=row_date)
   self.table.setColumnCount(len(heads));self.table.setHorizontalHeaderLabels(heads);self.table.setRowCount(len(rows))
   for i,row in enumerate(rows):
    for j,val in enumerate(row):self.table.setItem(i,j,QTableWidgetItem(str(val or "")))
