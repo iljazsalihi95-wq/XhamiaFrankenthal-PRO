@@ -35,17 +35,44 @@ def mosque_logo():
 
 class Login(QDialog):
  def __init__(self):
-  super().__init__();self.setWindowTitle("Xhamia Frankenthal PRO - Hyrja")
-  self.setMinimumWidth(440)
-  f=QFormLayout(self)
-  emblem=QLabel();emblem.setAlignment(Qt.AlignCenter)
+  super().__init__()
+  self.setWindowTitle("Xhamia Frankenthal PRO | Hyrja e sigurt")
+  self.setFixedSize(570,620)
+  self.setObjectName("loginWindow")
+  self.setStyleSheet("""
+   QDialog#loginWindow {background:#071d35;color:#fff;font-family:'Segoe UI'}
+   QLabel {color:#f2f6ff;background:transparent}
+   QLineEdit {background:#f5f9ff;color:#102a47;border:2px solid #aac5df;border-radius:11px;padding:13px;font-size:16px;min-height:30px}
+   QLineEdit:focus {border:2px solid #e3b951}
+   QPushButton {background:#e6b74c;color:#102542;border:none;border-radius:12px;padding:15px;font-weight:800;font-size:17px;min-height:26px}
+   QPushButton:hover {background:#f8ce6c}
+  """)
+  outer=QVBoxLayout(self);outer.setContentsMargins(48,24,48,30);outer.setSpacing(12)
+  emblem=QLabel();emblem.setAlignment(Qt.AlignCenter);emblem.setFixedHeight(166)
   picture=mosque_logo()
-  if not picture.isNull():emblem.setPixmap(picture.scaled(150,150,Qt.KeepAspectRatio,Qt.SmoothTransformation));self.setWindowIcon(QIcon(picture))
-  else:emblem.setText("XHAMIA FRANKENTHAL")
-  f.addRow(emblem)
-  caption=QLabel("SISTEMI I ADMINISTRIMIT  •  WINDOWS");caption.setAlignment(Qt.AlignCenter);f.addRow(caption)
-  self.u=QLineEdit();self.p=QLineEdit();self.p.setEchoMode(QLineEdit.Password);f.addRow("Përdoruesi",self.u);f.addRow("Fjalëkalimi",self.p)
-  b=QPushButton("Hyr");b.clicked.connect(self.check);f.addRow(b)
+  if not picture.isNull():
+   emblem.setPixmap(picture.scaled(155,155,Qt.KeepAspectRatio,Qt.SmoothTransformation))
+   self.setWindowIcon(QIcon(picture))
+  else:emblem.setText("☪")
+  outer.addWidget(emblem)
+  heading=QLabel("XHAMIA FRANKENTHAL PRO");heading.setAlignment(Qt.AlignCenter)
+  heading.setStyleSheet("color:#f4cc72;font-size:25px;font-weight:900")
+  outer.addWidget(heading)
+  subtitle=QLabel("ISLAMISCHER VEREIN FRANKENTHAL e.V.\nADMINISTRIMI I XHAMISË")
+  subtitle.setAlignment(Qt.AlignCenter);subtitle.setStyleSheet("color:#c3d9ec;font-size:13px;letter-spacing:1px")
+  outer.addWidget(subtitle)
+  outer.addSpacing(18)
+  user_label=QLabel("👤  PËRDORUESI");user_label.setStyleSheet("font-weight:700;font-size:13px")
+  outer.addWidget(user_label)
+  self.u=QLineEdit();self.u.setPlaceholderText("Shkruaj emrin e përdoruesit");outer.addWidget(self.u)
+  pass_label=QLabel("🔒  FJALËKALIMI");pass_label.setStyleSheet("font-weight:700;font-size:13px")
+  outer.addWidget(pass_label)
+  self.p=QLineEdit();self.p.setEchoMode(QLineEdit.Password);self.p.setPlaceholderText("Shkruaj fjalëkalimin")
+  self.p.returnPressed.connect(self.check);outer.addWidget(self.p)
+  outer.addSpacing(14)
+  b=QPushButton("HYR NË SISTEM  →");b.clicked.connect(self.check);outer.addWidget(b)
+  note=QLabel("Të dhënat e xhamisë ruhen në kompjuter.\nQasje vetëm për administratorët.")
+  note.setAlignment(Qt.AlignCenter);note.setStyleSheet("color:#a9bfd3;font-size:12px");outer.addWidget(note)
  def check(self):
   if self.u.text()=="XhamiaFrankenthal" and hmac.compare_digest(hashlib.sha256(self.p.text().encode()).hexdigest(),"4590c57bbe71fba3b0b4586e439d54f410eca68a7e1e17ba8f0f16b129d02b6f"):self.accept()
   else:QMessageBox.warning(self,"Gabim","Kredencialet nuk përputhen")
