@@ -59,6 +59,19 @@ class SourceTests(unittest.TestCase):
             self.assertEqual(summary(db, 2026)["Hyrjet"]["cash"], 450)
             self.assertEqual(summary(db, 2026)["Daljet"]["cash"], 100)
 
+    def test_bank_withdrawal_uses_source_note_and_inclusion_flag(self):
+        with sqlite3.connect(":memory:") as db:
+            seed(db)
+            before = summary(db, 2026)["Daljet"]["bank"]
+            db.executemany("INSERT INTO source_finance VALUES (?,?,?,?,?,?,?,?,?)", [
+                ("Daljet", 1001, "02.04.2026", "Tërheqje", "Bank", "Transfer i brendshëm", 51000, "Po",
+                 "Dalje reale nga BANKA. JO transfer Cash-Bank."),
+                ("Daljet", 1002, "04.04.2026", "Përjashtuar", "Bank", "Transfer i brendshëm", 50500, "Jo",
+                 "Dalje reale nga BANKA. JO transfer Cash-Bank."),
+                ("Daljet", 1003, "04.04.2026", "Transfer", "Bank", "Transfer i brendshëm", 20000, "Po", ""),
+            ])
+            self.assertEqual(summary(db, 2026)["Daljet"]["bank"] - before, 51000)
+
     def test_database(self):
         with sqlite3.connect(":memory:") as db:
             seed(db)

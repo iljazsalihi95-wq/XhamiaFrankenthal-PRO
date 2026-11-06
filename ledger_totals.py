@@ -17,8 +17,12 @@ def cents(value):
 def records(db, year, kind):
     sheet = kind if year == 2026 else f"{kind} {year}"
     source = db.execute(
-        """SELECT date, description, account, category, amount_cents, included,
-                  source_row FROM source_finance WHERE source_sheet=? ORDER BY source_row""",
+        """SELECT date, description, account,
+                  CASE WHEN source_sheet='Daljet' AND account='Bank'
+                            AND lower(notes) LIKE '%dalje reale nga banka%'
+                            AND lower(notes) LIKE '%jo transfer cash-bank%'
+                       THEN 'Borxh / Forderung' ELSE category END,
+                  amount_cents, included, source_row FROM source_finance WHERE source_sheet=? ORDER BY source_row""",
         (sheet,),
     ).fetchall()
     exists = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='finance'").fetchone()

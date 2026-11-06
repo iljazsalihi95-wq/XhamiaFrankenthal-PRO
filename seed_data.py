@@ -47,6 +47,6 @@ def seed(db):
             else:
                 rr=list(row)+[""]*10
                 date,desc,account,category,amount,included=rr[:6]
-                notes=str(rr[7] or "")
+                notes=" | ".join(str(value) for value in rr[6:9] if value)
             db.execute("INSERT OR IGNORE INTO source_finance VALUES (?,?,?,?,?,?,?,?,?)",(sheet,ix,normalized_date,str(desc),str(account),str(category),euros(amount),str(included),notes))
     db.commit()
