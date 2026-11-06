@@ -152,7 +152,7 @@ QStatusBar{background:#082d55;color:white;font-weight:bold}
   self._render_hero()
  def _render_hero(self):
   if not hasattr(self,"hero"):return
-  if self._hero_source.exists():
+  if getattr(self,"_hero_source",None) and self._hero_source.exists():
    photo=QPixmap(str(self._hero_source))
    if not photo.isNull():
     from PySide6.QtGui import QPainter,QLinearGradient
@@ -161,7 +161,15 @@ QStatusBar{background:#082d55;color:white;font-weight:bold}
     painter=QPainter(canvas)
     gradient=QLinearGradient(0,0,canvas.width(),0)
     gradient.setColorAt(0,QColor(2,30,61,235));gradient.setColorAt(.45,QColor(2,37,76,160));gradient.setColorAt(1,QColor(3,35,70,185))
-    painter.fillRect(canvas.rect(),gradient);painter.end()
+    painter.fillRect(canvas.rect(),gradient)
+    from PySide6.QtGui import QFont
+    painter.setPen(QColor("#f6d47e"))
+    painter.setFont(QFont("Segoe UI",25,QFont.Bold))
+    painter.drawText(canvas.rect().adjusted(18,10,-18,-50),Qt.AlignCenter,"XHAMIA FRANKENTHAL PRO")
+    painter.setPen(QColor("#ffffff"))
+    painter.setFont(QFont("Segoe UI",11,QFont.DemiBold))
+    painter.drawText(canvas.rect().adjusted(18,78,-18,-8),Qt.AlignCenter,"ADMINISTRIMI I XHAMISË • REGJISTRIME DHE LLOGARITJE AUTOMATIKE")
+    painter.end()
     self.hero.setPixmap(canvas)
     self.hero.setText("")
     self.hero.setToolTip("XHAMIA FRANKENTHAL PRO")
