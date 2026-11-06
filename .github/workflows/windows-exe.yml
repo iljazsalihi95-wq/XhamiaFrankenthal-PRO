@@ -18,7 +18,7 @@ jobs:
           python -m compileall -q -l .
           python -c "import json, pathlib; files=list(pathlib.Path('data').glob('*.json')); assert len(files)>=9; [json.loads(p.read_text(encoding='utf-8')) for p in files]; print('Validated',len(files),'source snapshots')"
       - name: Check annual certificate template
-        run: python -c "from pathlib import Path; p=Path('templates/anlage14_jahreszahlungen.html'); t=p.read_text(encoding='utf-8'); assert 'Anlage 14' in t and 'Sammelbestätigung' in t"
+        run: python -c "from pathlib import Path; p=Path('templates/anlage14_jahreszahlungen.html'); t=p.read_text(encoding='utf-8'); assert 'Anlage 14' in t and 'Sammelbestätigung' in t; h=Path('templates/sistemi_i_hoxhes.html').read_text(encoding='utf-8'); assert 'Sistemi i Hoxhës' in h and 'lectures' in h"
       - name: Test source imports and financial summaries
         run: python -m unittest -v test_sources
       - name: Prepare official mosque branding
