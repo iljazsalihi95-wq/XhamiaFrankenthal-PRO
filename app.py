@@ -137,7 +137,7 @@ class Main(QMainWindow):
   for name,icon in (
    ("Ballina",QStyle.SP_DirHomeIcon),("Anëtarësia",QStyle.SP_DirOpenIcon),
    ("Hyrjet",QStyle.SP_ArrowDown),("Daljet",QStyle.SP_ArrowUp),
-   ("Bilanci",QStyle.SP_ComputerIcon),("Buchhaltung",QStyle.SP_FileDialogDetailedView),("Dëftesat",QStyle.SP_FileIcon),("Vërtetimi i pagesave vjetore",QStyle.SP_FileDialogDetailedView),
+   ("Bilanci",QStyle.SP_ComputerIcon),("Buchhaltung",QStyle.SP_FileDialogDetailedView),("Dëftesat",QStyle.SP_FileIcon),("Vërtetimi i pagesave vjetore",QStyle.SP_FileDialogDetailedView),("Sistemi i Hoxhës",QStyle.SP_DirHomeIcon),
    ("Hudbe & Derse",QStyle.SP_DirIcon),("Historiku",QStyle.SP_FileDialogInfoView),
    ("Rregullorja",QStyle.SP_FileIcon),("Mbledhjet",QStyle.SP_DirIcon),
    ("Procesverbalet",QStyle.SP_FileIcon),("Cilësimet",QStyle.SP_FileDialogDetailedView)
@@ -392,10 +392,21 @@ QStatusBar QLabel{color:white}
    self.receipt_pdf()
   elif name=="Vërtetimi i pagesave vjetore":
    self.open_annual_payment_confirmation()
+  elif name=="Sistemi i Hoxhës":
+   self.open_imam_office()
   elif name=="Cilësimet":
    self.open_settings()
   elif name!="Ballina":
    self.open_documents(name)
+ def open_imam_office(self):
+  """Open the complete supplied Imam Office HTML without altering its modules."""
+  bundle_root=Path(getattr(sys,"_MEIPASS",Path(__file__).resolve().parent))
+  template=bundle_root/"templates"/"sistemi_i_hoxhes.html"
+  if not template.is_file():
+   QMessageBox.warning(self,"Sistemi i Hoxhës","HTML i sistemit mungon në paketën e programit.")
+   return
+  QDesktopServices.openUrl(QUrl.fromLocalFile(str(template)))
+
  def open_annual_payment_confirmation(self):
   """Open the supplied Anlage 14 template; do not generate unverified payments."""
   bundle_root=Path(getattr(sys,"_MEIPASS",Path(__file__).resolve().parent))
