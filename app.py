@@ -1,8 +1,8 @@
 import sys, sqlite3, os, datetime, hashlib, hmac, tempfile
 from pathlib import Path
-from PySide6.QtWidgets import QApplication,QMainWindow,QWidget,QVBoxLayout,QHBoxLayout,QLabel,QPushButton,QTableWidget,QTableWidgetItem,QComboBox,QFileDialog,QMessageBox,QLineEdit,QDialog,QFormLayout,QFrame,QDoubleSpinBox,QDateEdit,QScrollArea,QAbstractItemView,QStyle
+from PySide6.QtWidgets import QApplication,QMainWindow,QWidget,QVBoxLayout,QHBoxLayout,QLabel,QPushButton,QTableWidget,QTableWidgetItem,QComboBox,QFileDialog,QMessageBox,QLineEdit,QDialog,QFormLayout,QFrame,QDoubleSpinBox,QDateEdit,QScrollArea,QAbstractItemView,QStyle,QSizePolicy
 from PySide6.QtCore import Qt, QUrl, QSize, QDate, QTimer
-from PySide6.QtGui import QPixmap, QIcon, QColor, QBrush, QDesktopServices
+from PySide6.QtGui import QPixmap, QIcon, QColor, QBrush, QDesktopServices, QPainter, QPainterPath, QLinearGradient
 from PySide6.QtWidgets import QHeaderView
 from PySide6.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkReply
 from seed_data import seed
@@ -41,65 +41,86 @@ def mosque_logo():
 class Login(QDialog):
  def __init__(self):
   super().__init__()
-  self.setWindowTitle("Xhamia Frankenthal PRO | Hyrja e sigurt")
-  self.setFixedSize(570,620)
+  self.setWindowTitle("Xhamia Frankenthal PRO — Hyrja")
+  self.setFixedSize(680,490)
   self.setObjectName("loginWindow")
-  self.setStyleSheet("""
-   QDialog#loginWindow {background:#071d35;color:#fff;font-family:'Segoe UI'}
-   QLabel {color:#f2f6ff;background:transparent}
-   QLineEdit {background:#f5f9ff;color:#102a47;border:2px solid #aac5df;border-radius:11px;padding:13px;font-size:16px;min-height:30px}
-   QLineEdit:focus {border:2px solid #e3b951}
-   QPushButton {background:#e6b74c;color:#102542;border:none;border-radius:12px;padding:15px;font-weight:800;font-size:17px;min-height:26px}
-   QPushButton:hover {background:#f8ce6c}
-  """)
-  outer=QVBoxLayout(self);outer.setContentsMargins(48,24,48,30);outer.setSpacing(12)
-  emblem=QLabel();emblem.setAlignment(Qt.AlignCenter);emblem.setFixedHeight(166)
   picture=mosque_logo()
-  if not picture.isNull():
-   emblem.setPixmap(picture.scaled(155,155,Qt.KeepAspectRatio,Qt.SmoothTransformation))
-   self.setWindowIcon(QIcon(picture))
-  else:emblem.setText("☪")
-  outer.addWidget(emblem)
-  heading=QLabel("XHAMIA FRANKENTHAL PRO");heading.setAlignment(Qt.AlignCenter)
-  heading.setStyleSheet("color:#f4cc72;font-size:25px;font-weight:900")
-  outer.addWidget(heading)
-  subtitle=QLabel("ISLAMISCHER VEREIN FRANKENTHAL e.V.\nADMINISTRIMI I XHAMISË")
-  subtitle.setAlignment(Qt.AlignCenter);subtitle.setStyleSheet("color:#c3d9ec;font-size:13px;letter-spacing:1px")
-  outer.addWidget(subtitle)
-  outer.addSpacing(18)
-  user_label=QLabel("👤  PËRDORUESI");user_label.setStyleSheet("font-weight:700;font-size:13px")
-  outer.addWidget(user_label)
-  self.u=QLineEdit();self.u.setPlaceholderText("Shkruaj emrin e përdoruesit");outer.addWidget(self.u)
-  pass_label=QLabel("🔒  FJALËKALIMI");pass_label.setStyleSheet("font-weight:700;font-size:13px")
-  outer.addWidget(pass_label)
-  self.p=QLineEdit();self.p.setEchoMode(QLineEdit.Password);self.p.setPlaceholderText("Shkruaj fjalëkalimin")
-  self.p.returnPressed.connect(self.check);outer.addWidget(self.p)
-  outer.addSpacing(14)
-  b=QPushButton("HYR NË SISTEM  →");b.clicked.connect(self.check);outer.addWidget(b)
-  note=QLabel("Të dhënat e xhamisë ruhen në kompjuter.\nQasje vetëm për administratorët.")
-  note.setAlignment(Qt.AlignCenter);note.setStyleSheet("color:#a9bfd3;font-size:12px");outer.addWidget(note)
+  self.setWindowIcon(QIcon(picture))
+  outer=QHBoxLayout(self);outer.setContentsMargins(0,0,0,0);outer.setSpacing(0)
+
+  brand=QFrame();brand.setObjectName("loginBrand");brand.setFixedWidth(242)
+  brand_layout=QVBoxLayout(brand);brand_layout.setContentsMargins(18,24,18,24)
+  brand_layout.addStretch()
+  emblem=QLabel();emblem.setAlignment(Qt.AlignCenter)
+  emblem.setPixmap(picture.scaled(144,144,Qt.KeepAspectRatio,Qt.SmoothTransformation))
+  brand_layout.addWidget(emblem)
+  brand_title=QLabel("XHAMIA FRANKENTHAL");brand_title.setObjectName("loginBrandTitle")
+  brand_title.setAlignment(Qt.AlignCenter);brand_title.setWordWrap(True);brand_layout.addWidget(brand_title)
+  brand_subtitle=QLabel("ISLAMISCHER VEREIN\nFRANKENTHAL e.V.")
+  brand_subtitle.setAlignment(Qt.AlignCenter);brand_layout.addWidget(brand_subtitle)
+  brand_layout.addStretch()
+  outer.addWidget(brand)
+
+  panel=QWidget();form=QVBoxLayout(panel);form.setContentsMargins(34,30,34,28);form.setSpacing(9)
+  form.addStretch()
+  heading=QLabel("Hyr në program");heading.setObjectName("loginHeading");form.addWidget(heading)
+  subtitle=QLabel("Administrimi i Xhamisë Frankenthal");form.addWidget(subtitle)
+  form.addSpacing(13)
+  self.u=QLineEdit();self.u.setPlaceholderText("Emri i përdoruesit")
+  self.p=QLineEdit();self.p.setEchoMode(QLineEdit.Password);self.p.setPlaceholderText("Fjalëkalimi")
+  for title,field in (("Përdoruesi",self.u),("Fjalëkalimi",self.p)):
+   label=QLabel(title);label.setObjectName("loginField");label.setBuddy(field)
+   form.addWidget(label);form.addWidget(field)
+  self.error=QLabel();self.error.setObjectName("loginError")
+  self.error.setFixedHeight(20);form.addWidget(self.error)
+  for field in (self.u,self.p):field.textEdited.connect(self.error.clear)
+  button=QPushButton("Hyr në program  →");button.setDefault(True);button.clicked.connect(self.check)
+  form.addWidget(button)
+  form.addStretch()
+  version=QLabel("Xhamia Frankenthal PRO   ·   Windows");version.setObjectName("loginVersion")
+  form.addWidget(version);outer.addWidget(panel,1)
+  self.setStyleSheet("""
+   QDialog#loginWindow {background:#f5f9ff;font-family:'Segoe UI';font-size:14px}
+   QLabel {color:#153656;background:transparent}
+   QFrame#loginBrand {background:qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 #082848,stop:1 #0a5685);border-right:3px solid #dfb44f}
+   QFrame#loginBrand QLabel {color:#deecfa}
+   QFrame#loginBrand QLabel#loginBrandTitle {color:#ffda7c;font-size:17px;font-weight:800;padding-top:15px}
+   QLabel#loginHeading {font-size:32px;font-weight:800;color:#0b3054}
+   QLabel#loginField {font-weight:700}
+   QLabel#loginError {color:#a31e36;font-size:12px}
+   QLabel#loginVersion {color:#536a80;font-size:12px}
+   QLineEdit {background:#fff;color:#102a47;border:1px solid #a3bed8;border-radius:9px;padding:10px;font-size:15px;min-height:20px}
+   QLineEdit:focus {border:2px solid #1267a0}
+   QPushButton {background:#0b5185;color:#fff;border:1px solid #063759;border-radius:10px;padding:12px;font-weight:800;font-size:15px}
+   QPushButton:hover {background:#126eaa}
+  """)
+  self.u.setFocus()
  def check(self):
-  if self.u.text()=="XhamiaFrankenthal" and hmac.compare_digest(hashlib.sha256(self.p.text().encode()).hexdigest(),"4590c57bbe71fba3b0b4586e439d54f410eca68a7e1e17ba8f0f16b129d02b6f"):self.accept()
-  else:QMessageBox.warning(self,"Gabim","Kredencialet nuk përputhen")
+  if self.u.text()=="XhamiaFrankenthal" and hmac.compare_digest(hashlib.sha256(self.p.text().encode()).hexdigest(),"4590c57bbe71fba3b0b4586e439d54f410eca68a7e1e17ba8f0f16b129d02b6f"):
+   self.accept()
+  else:
+   self.error.setText("Përdoruesi ose fjalëkalimi nuk përputhet.")
+   self.p.setFocus();self.p.selectAll()
+
 class Main(QMainWindow):
  def __init__(self):
-  super().__init__();self.setWindowTitle("Xhamia Frankenthal PRO");self.resize(1500,880);self.setMinimumSize(1120,700)
+  super().__init__();self.setWindowTitle("Xhamia Frankenthal PRO — Administrimi i Xhamisë");self.resize(1500,880);self.setMinimumSize(1120,700)
   pic=mosque_logo()
   if not pic.isNull():self.setWindowIcon(QIcon(pic))
   w=QWidget();self.setCentralWidget(w);v=QVBoxLayout(w)
   v.setContentsMargins(8,8,8,4);v.setSpacing(7)
   top=QHBoxLayout();top.setSpacing(0);v.addLayout(top)
-  brand_box=QFrame();brand_box.setObjectName("brand");brand_box.setFixedSize(210,194)
+  brand_box=QFrame();brand_box.setObjectName("brand");brand_box.setFixedSize(210,222)
   brand_layout=QVBoxLayout(brand_box);brand_layout.setContentsMargins(6,5,6,7)
   logo=QLabel();logo.setAlignment(Qt.AlignCenter)
-  if not pic.isNull():logo.setPixmap(pic.scaled(126,126,Qt.KeepAspectRatio,Qt.SmoothTransformation))
+  if not pic.isNull():logo.setPixmap(pic.scaled(148,148,Qt.KeepAspectRatio,Qt.SmoothTransformation))
   brand_layout.addWidget(logo,1)
   brand=QLabel("ISLAMISCHER VEREIN\nFRANKENTHAL e.V.")
   brand.setAlignment(Qt.AlignCenter);brand_layout.addWidget(brand)
   top.addWidget(brand_box)
-  banner=QFrame();banner.setObjectName("banner");banner.setFixedHeight(194)
+  banner=QFrame();banner.setObjectName("banner");banner.setFixedHeight(222)
   banner_layout=QVBoxLayout(banner);banner_layout.setContentsMargins(0,0,0,0);banner_layout.setSpacing(0)
-  self.hero=QLabel();self.hero.setAlignment(Qt.AlignCenter);self.hero.setMinimumSize(1,122)
+  self.hero=QLabel();self.hero.setAlignment(Qt.AlignCenter);self.hero.setMinimumSize(1,145);self.hero.setSizePolicy(QSizePolicy.Ignored,QSizePolicy.Expanding)
   banner_layout.addWidget(self.hero,1)
   heading=QLabel("XHAMIA FRANKENTHAL PRO");heading.setObjectName("heroTitle");heading.setAlignment(Qt.AlignCenter)
   banner_layout.addWidget(heading)
@@ -126,7 +147,7 @@ class Main(QMainWindow):
    nav.addWidget(button);self.nav_buttons[name]=button
   nav.addStretch()
   body.addWidget(scroll)
-  workspace=QWidget();work=QVBoxLayout(workspace);work.setContentsMargins(8,0,0,0)
+  workspace=QFrame();workspace.setObjectName("workspace");work=QVBoxLayout(workspace);work.setContentsMargins(10,8,10,8);work.setSpacing(6)
   body.addWidget(workspace,1)
   bar=QHBoxLayout();work.addLayout(bar)
   self.mode=QComboBox();self.mode.addItems(["Anëtarësia","Hyrjet","Daljet"]);bar.addWidget(self.mode)
@@ -144,7 +165,9 @@ class Main(QMainWindow):
    ("Raport financiar A4",self.financial_pdf,"gold")
   ):
    btn=QPushButton(label);btn.setProperty("tone",tone);btn.clicked.connect(callback);actions.addWidget(btn)
-  filters=QHBoxLayout();work.addLayout(filters)
+  filter_panel=QFrame();filter_panel.setObjectName("filters");work.addWidget(filter_panel)
+  filters=QHBoxLayout(filter_panel);filters.setContentsMargins(8,4,8,4)
+  filter_label=QLabel("Filtrimi");filter_label.setObjectName("filterLabel");filters.addWidget(filter_label)
   self.month_filter=QComboBox();self.month_filter.addItems(["Të gjithë muajt","Janar","Shkurt","Mars","Prill","Maj","Qershor","Korrik","Gusht","Shtator","Tetor","Nëntor","Dhjetor"])
   self.date_from=QDateEdit();self.date_to=QDateEdit()
   for label,field in (("Nga data",self.date_from),("Deri më",self.date_to)):
@@ -156,48 +179,53 @@ class Main(QMainWindow):
   self.summary_label=QLabel("Raport nga të dhënat e importuara — pa rakordim bankar");self.summary_label.setObjectName("summary");work.addWidget(self.summary_label)
   self.stats=QHBoxLayout();work.addLayout(self.stats)
   self.stat_cards=[]
-  for label,color in (("CASH","#0c8b5d"),("BANK","#1766ad"),("TË PAKLASIFIKUARA","#7548b7"),("TOTALI","#c88a16")):
+  for label,color in (("Cash","#b5ead5"),("Bank","#a8d8ff"),("Të paklasifikuara","#e0cbff"),("Totali","#ffda82")):
    card=QLabel(label+"\\n—");card.setAlignment(Qt.AlignCenter);card.setObjectName("statCard")
-   card.setStyleSheet(f"QLabel#statCard{{background:{color};color:white;border-radius:12px;padding:10px;font-weight:800;font-size:16px;min-height:60px}}")
+   card.setStyleSheet(f"QLabel#statCard{{background:{color};color:#10284d;border:1px solid #92aec9;border-radius:10px;padding:6px;font-weight:800;font-size:16px;min-height:45px}}")
    self.stats.addWidget(card);self.stat_cards.append(card)
   self.table=QTableWidget();self.table.setAlternatingRowColors(True);self.table.setMinimumHeight(190);self.table.verticalHeader().setDefaultSectionSize(34);self.table.setEditTriggers(QAbstractItemView.NoEditTriggers);self.table.setSelectionBehavior(QAbstractItemView.SelectRows);self.table.doubleClicked.connect(self.edit_record);self.table.setWordWrap(False);work.addWidget(self.table,3);self.mode.currentIndexChanged.connect(self.load);self.year.currentIndexChanged.connect(self.year_changed)
   self.setStyleSheet("""
-QMainWindow,QWidget{background:#eaf2fc;color:#102d50;font-family:'Segoe UI';font-size:13px}
+QMainWindow{background:#073456} QWidget{color:#102d50;font-family:'Segoe UI';font-size:13px}
 QFrame#brand,QFrame#banner,QLabel#heroTitle,QLabel#tagline{background:#083c68;color:#f6d47e}
-QFrame#brand QLabel{background:transparent;color:#f6d47e;font-weight:800}
-QLabel#heroTitle{font-size:29px;font-weight:900;border-top:3px solid #d5a83c}
+QFrame#brand QLabel{background:transparent;color:#f6d47e;font-weight:800;font-size:15px}
+QFrame#workspace{background:#eef6ff;border:2px solid #98c7e9;border-radius:15px}
+QFrame#filters{background:#dceeff;border:1px solid #accdea;border-radius:8px}
+QLabel#filterLabel{font-weight:800}
+QLabel#heroTitle{font-size:29px;font-weight:900;padding-bottom:1px}
 QLabel#tagline{font-size:11px;color:white;padding:4px;letter-spacing:1px}
-QPushButton[tone="green"]{background:#087c42}
-QPushButton[tone="red"]{background:#b32037}
-QPushButton[tone="purple"]{background:#6732a4}
-QPushButton[tone="gold"]{background:#a95c09}
+QPushButton[tone="green"]{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #22bb58,stop:1 #087337)}
+QPushButton[tone="red"]{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #f34b58,stop:1 #a80c2a)}
+QPushButton[tone="purple"]{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #9258d1,stop:1 #502388)}
+QPushButton[tone="gold"]{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #ffab23,stop:1 #b96400)}
+QPushButton[tone="blue"]{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #1b81c8,stop:1 #053b68)}
 QFrame#sidebar{background:#082d55;border:2px solid #d4ae55;border-radius:17px}
 QFrame#sidebar QLabel{background:transparent;color:#f3d17c}
 QPushButton{background:#0864a2;border:1px solid #75b4e1;border-radius:10px;padding:11px;color:white;font-weight:700;font-size:13px;min-height:20px}
 QPushButton:hover{background:#1883cc;border-color:#f0bf55}
-QPushButton#navButton{background:#064373;text-align:left;padding-left:19px;font-size:15px;min-height:18px;padding-top:6px;padding-bottom:6px;border:1px solid #4da4d9}
-QPushButton#navButton:hover,QPushButton#navButton:checked{background:#d8a02d;color:#082e50}\nQLabel#summary{background:#d9eafa;color:#07385e;padding:10px;border:1px solid #8cbbe1;border-radius:10px;font-size:14px;font-weight:800}
+QPushButton#navButton{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #086aa4,stop:1 #053353);text-align:left;padding-left:19px;font-size:15px;min-height:18px;padding-top:6px;padding-bottom:6px;border:1px solid #4da4d9}
+QPushButton#navButton:hover,QPushButton#navButton:checked{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #ffe36e,stop:1 #ce860a);color:#082e50}\nQLabel#summary{background:#d9eafa;color:#07385e;padding:10px;border:1px solid #8cbbe1;border-radius:10px;font-size:14px;font-weight:800}
 QComboBox,QLineEdit,QDateEdit{background:#fff;border:2px solid #a3c6e4;border-radius:9px;padding:9px;color:#10365b;min-height:22px}
 QTableWidget{font-size:14px;background:#fff;alternate-background-color:#dceafb;gridline-color:#bfd5ec;selection-background-color:#86c5f3;selection-color:#06284b;border:2px solid #a7c8e5;border-radius:12px}
 QTableWidget::item{padding:7px}
-QHeaderView::section{background:#07508a;color:white;padding:12px;border:1px solid #3375a5;font-weight:bold;font-size:14px}
+QHeaderView::section{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #1779b4,stop:1 #063356);color:white;padding:8px;border:1px solid #3375a5;font-weight:bold;font-size:14px}
 QScrollBar:vertical{background:#d8e8f8;width:14px}
 QScrollBar::handle:vertical{background:#6d9ec4;border-radius:6px;min-height:24px}
 QDialog{background:#eaf2fc;color:#102d50}
 QStatusBar{background:#082d55;color:white;font-weight:bold}
+QStatusBar QLabel{color:white}
 """)
   self.search.textChanged.connect(self.apply_search)
   self.month_filter.currentIndexChanged.connect(self.apply_search)
   self.date_from.dateChanged.connect(self.apply_search)
   self.date_to.dateChanged.connect(self.apply_search)
-  self.statusBar().addPermanentWidget(QLabel("  Sistemi lokal  "))
+  self.statusBar().addPermanentWidget(QLabel("  ●  Sistemi lokal  "))
   self.mode.setCurrentText("Hyrjet")
   self.load()
-  self.navigate("Ballina")
-  self._render_hero()
+  self.navigate("Hyrjet")
+  QTimer.singleShot(0,self._render_hero)
  def resizeEvent(self,event):
   super().resizeEvent(event)
-  self._render_hero()
+  QTimer.singleShot(0,self._render_hero)
  def _render_hero(self):
   if not hasattr(self,"hero"):return
   photo=QPixmap(str(ROOT/"mosque_interior.jpg"))
@@ -206,9 +234,24 @@ QStatusBar{background:#082d55;color:white;font-weight:bold}
    self.hero.setStyleSheet("background:qlineargradient(x1:0,y1:0,x2:1,y2:0,stop:0 #052744,stop:.5 #075082,stop:1 #10345d)")
    return
   width=max(1,self.hero.width())
-  height=122
+  height=max(145,self.hero.height())
   canvas=photo.scaled(width,height,Qt.KeepAspectRatioByExpanding,Qt.SmoothTransformation)
-  self.hero.setPixmap(canvas.copy((canvas.width()-width)//2,(canvas.height()-height)//2,width,height))
+  header=canvas.copy((canvas.width()-width)//2,(canvas.height()-height)//2,width,height)
+  painter=QPainter(header);painter.setRenderHint(QPainter.Antialiasing)
+  curve=QPainterPath()
+  curve.moveTo(0,height-13)
+  curve.cubicTo(width*.32,height+18,width*.75,height+12,width,height-42)
+  curve.lineTo(width,height);curve.lineTo(0,height);curve.closeSubpath()
+  painter.fillPath(curve,QColor("#083c68"))
+  ribbon=QPainterPath()
+  ribbon.moveTo(0,height-13)
+  ribbon.cubicTo(width*.32,height+18,width*.75,height+12,width,height-42)
+  ribbon.cubicTo(width*.77,height+22,width*.33,height+24,0,height-5)
+  ribbon.closeSubpath()
+  gold=QLinearGradient(0,0,width,0)
+  gold.setColorAt(0,QColor("#cc942e"));gold.setColorAt(.48,QColor("#ffe791"));gold.setColorAt(1,QColor("#c48929"))
+  painter.fillPath(ribbon,gold);painter.end()
+  self.hero.setPixmap(header)
  def reset_date_range(self):
   year=int(self.year.currentText())
   for widget,date in ((self.date_from,QDate(year,1,1)),(self.date_to,QDate(year,12,31))):
@@ -661,8 +704,13 @@ QStatusBar{background:#082d55;color:white;font-weight:bold}
   except Exception as e:QMessageBox.critical(self,"PDF",str(e))
 if __name__=="__main__":
  app=QApplication(sys.argv)
+ app.setWindowIcon(QIcon(mosque_logo()))
  login=Login()
  if "--smoke-test" in sys.argv:
+  login.show();app.processEvents()
+  assert login.isVisible() and login.p.echoMode()==QLineEdit.Password
+  login.check();assert login.error.text()
+  login.hide()
   win=Main();win.show();app.processEvents()
   assert not mosque_logo().isNull() and not login.windowIcon().isNull()
   assert not QPixmap(str(ASSETS/"mosque_interior.jpg")).isNull()
