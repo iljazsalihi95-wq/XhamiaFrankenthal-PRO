@@ -1,4 +1,4 @@
-import sys, sqlite3, os, datetime, hashlib, hmac, tempfile
+import sys, sqlite3, os, datetime, hashlib, hmac, tempfile, shutil
 from pathlib import Path
 from PySide6.QtWidgets import QApplication,QMainWindow,QWidget,QVBoxLayout,QHBoxLayout,QLabel,QPushButton,QTableWidget,QTableWidgetItem,QComboBox,QFileDialog,QMessageBox,QLineEdit,QDialog,QFormLayout,QFrame,QDoubleSpinBox,QDateEdit,QScrollArea,QAbstractItemView,QStyle,QSizePolicy
 from PySide6.QtCore import Qt, QUrl, QSize, QDate, QTimer
@@ -419,7 +419,20 @@ QStatusBar QLabel{color:white}
  def open_settings(self):
   dialog=QDialog(self);dialog.setWindowTitle("Cilësimet dhe burimet zyrtare")
   layout=QVBoxLayout(dialog)
-  layout.addWidget(QLabel(f"Databaza lokale\n{database_path}"))
+  layout.addWidget(QLabel(f"Databaza lokale\\n{database_path}"))
+  photo_button=QPushButton("Vendos fotografinë e xhamisë në ballinë")
+  def set_mosque_photo():
+   path,_=QFileDialog.getOpenFileName(dialog,"Zgjidh fotografinë e xhamisë","","Fotografi (*.jpg *.jpeg *.png)")
+   if not path:return
+   picture=QPixmap(path)
+   if picture.isNull():
+    QMessageBox.warning(dialog,"Fotografia","Skedari nuk është fotografi e vlefshme.");return
+   if not picture.save(str(ROOT/"mosque_interior.jpg"),"JPG",92):
+    QMessageBox.warning(dialog,"Fotografia","Nuk u ruajt fotografia.");return
+   self._render_hero()
+   QMessageBox.information(dialog,"Ballina","Fotografia u vendos në ballinë dhe ruhet edhe pas rinisjes.")
+  photo_button.clicked.connect(set_mosque_photo)
+  layout.addWidget(photo_button)
   for label,gid in TABS.items():
    button=QPushButton("Hap në Google Sheets · "+label)
    button.clicked.connect(lambda checked=False,tab=gid:QDesktopServices.openUrl(QUrl(f"{SHEET}/edit#gid={tab}")))
