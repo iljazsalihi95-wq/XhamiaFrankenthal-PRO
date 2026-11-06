@@ -65,3 +65,22 @@ def totals(rows):
 
 def summary(db, year):
     return {kind: totals(records(db, year, kind)) for kind in ("Hyrjet", "Daljet")}
+
+
+def reconciliation(db, year):
+    """Compare the imported source rows with the same workbook's cached summary."""
+    if year != 2026 or not db.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='source_balance'"
+    ).fetchone():
+        return {}
+    official = dict(db.execute(
+        "SELECT row_num,value FROM source_balance WHERE tab='Gjendja' AND col_num=11 AND row_num IN (3,4)"
+    ))
+    comparison = {}
+    for kind, row_number in (("Hyrjet", 3), ("Daljet", 4)):
+        if row_number not in official:
+            continue
+        imported = totals(row for row in records(db, year, kind) if row[6] > 0)
+        classified = sum(imported[key] for key in ("cash", "bank", "other"))
+        comparison[kind] = (classified, cents(official[row_number]))
+    return comparison

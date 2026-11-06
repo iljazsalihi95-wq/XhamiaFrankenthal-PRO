@@ -7,7 +7,7 @@ from PySide6.QtWidgets import QHeaderView
 from PySide6.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkReply
 from seed_data import seed
 from finance_reports import report
-from ledger_totals import summary, records, totals, exclusion
+from ledger_totals import summary, records, totals, exclusion, reconciliation
 from receipts import create_receipt
 from membership_rollover import carry_forward
 from sheet_source import SHEET, TABS, backup_database, import_workbook
@@ -517,7 +517,7 @@ QStatusBar{background:#082d55;color:white;font-weight:bold}
   self.apply_search()
  def show_balance(self):
   y=int(self.year.currentText())
-  from ledger_totals import summary, records, totals, exclusion as balance_summary
+  from ledger_totals import summary, records, totals, exclusion, reconciliation as balance_summary
   try:
    values=balance_summary(db,y)
    incoming=values["Hyrjet"];outgoing=values["Daljet"]
@@ -537,6 +537,12 @@ QStatusBar{background:#082d55;color:white;font-weight:bold}
    grid.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
    layout.addWidget(grid)
    notice=QLabel("Diferencat janë lëvizje të regjistruara, jo domosdoshmërisht gjendja reale e bankës.\\nGjendjet fillestare dhe rakordimet duhet të kontrollohen veçmas.")
+   comparison=reconciliation(db,y)
+   if comparison:
+    audit=["Krahasimi me fletën Gjendja (vetëm rreshtat e burimit)"]
+    for kind,(calculated,official) in comparison.items():
+     audit.append(f"{kind}: klasifikuar {calculated/100:,.2f} € · fleta {official/100:,.2f} € · diferenca {(calculated-official)/100:+,.2f} €")
+    audit_label=QLabel("\n".join(audit));audit_label.setWordWrap(True);layout.addWidget(audit_label)
    notice.setWordWrap(True);layout.addWidget(notice)
    buttons=QHBoxLayout();layout.addLayout(buttons)
    export=QPushButton("Eksporto raportin PDF");export.clicked.connect(self.financial_pdf);buttons.addWidget(export)

@@ -18,7 +18,7 @@ def font_setup():
     return "Helvetica"
 
 def report(db,year,path):
-    from ledger_totals import summary as combined_summary
+    from ledger_totals import summary as combined_summary, reconciliation
     s=combined_summary(db,year)
     font=font_setup()
     styles=getSampleStyleSheet()
@@ -34,4 +34,10 @@ def report(db,year,path):
     story.append(Spacer(1,16))
     story.append(Paragraph("Shënim: Ky raport pasqyron regjistrin e importuar dhe regjistrimet lokale. Gjendjet fillestare, transfertat e brendshme dhe rreshtat e shënuar për përjashtim nuk numërohen si hyrje/dalje të reja. Raporti nuk është rakordim bankar dhe nuk konfirmon gjendjen reale të arkës ose bankës.",styles["Normal"]))
     story.append(Paragraph(f"Rreshta të përjashtuar: Hyrjet {s['Hyrjet']['excluded']}, Daljet {s['Daljet']['excluded']}.",styles["Normal"]))
+    for kind,(calculated,official) in reconciliation(db,year).items():
+        story.append(Paragraph(
+            f"{kind}, vetëm burimi: klasifikuar {calculated/100:,.2f} €; "
+            f"fleta Gjendja {official/100:,.2f} €; diferenca {(calculated-official)/100:+,.2f} €.",
+            styles["Normal"],
+        ))
     doc.build(story)
