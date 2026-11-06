@@ -7,6 +7,7 @@ from PySide6.QtWidgets import QHeaderView
 from PySide6.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkReply
 from seed_data import seed
 from finance_reports import report
+from buchhaltung import Buchhaltung
 from ledger_totals import summary, records, totals, exclusion, reconciliation
 from receipts import create_receipt
 from membership_rollover import carry_forward
@@ -136,7 +137,7 @@ class Main(QMainWindow):
   for name,icon in (
    ("Ballina",QStyle.SP_DirHomeIcon),("Anëtarësia",QStyle.SP_DirOpenIcon),
    ("Hyrjet",QStyle.SP_ArrowDown),("Daljet",QStyle.SP_ArrowUp),
-   ("Bilanci",QStyle.SP_ComputerIcon),("Dëftesat",QStyle.SP_FileIcon),
+   ("Bilanci",QStyle.SP_ComputerIcon),("Buchhaltung",QStyle.SP_FileDialogDetailedView),("Dëftesat",QStyle.SP_FileIcon),
    ("Hudbe & Derse",QStyle.SP_DirIcon),("Historiku",QStyle.SP_FileDialogInfoView),
    ("Rregullorja",QStyle.SP_FileIcon),("Mbledhjet",QStyle.SP_DirIcon),
    ("Procesverbalet",QStyle.SP_FileIcon),("Cilësimet",QStyle.SP_FileDialogDetailedView)
@@ -383,6 +384,8 @@ QStatusBar QLabel{color:white}
   self.dashboard.setVisible(name=="Ballina")
   if name in ("Anëtarësia","Hyrjet","Daljet"):
    self.mode.setCurrentText(name);self.reset_filters()
+  elif name=="Buchhaltung":
+   Buchhaltung(self,db,int(self.year.currentText())).exec()
   elif name=="Bilanci":
    self.show_balance()
   elif name=="Dëftesat":
@@ -715,7 +718,7 @@ if __name__=="__main__":
   assert not mosque_logo().isNull() and not login.windowIcon().isNull()
   assert not QPixmap(str(ASSETS/"mosque_interior.jpg")).isNull()
   assert win.hero.pixmap() and not win.hero.pixmap().isNull()
-  assert win.table.rowCount()>0 and len(win.nav_buttons)==12
+  assert win.table.rowCount()>0 and len(win.nav_buttons)==13
   win.navigate("Daljet")
   assert win.table.rowCount()>0 and win.stat_cards[3].isVisible()
   win.navigate("Anëtarësia")
@@ -729,6 +732,10 @@ if __name__=="__main__":
   QTimer.singleShot(50,close_balance)
   win.navigate("Bilanci")
   assert opened_dialogs==["Bilanci ndër vite — 2026"]
+  books=Buchhaltung(win,db,2025)
+  assert books.book.rowCount()>0
+  books.year.setCurrentText("2026")
+  assert books.book.rowCount()>0 and books.docs.rowCount()==0
   sys.exit(0)
  if login.exec()==QDialog.Accepted:
   win=Main();win.show();sys.exit(app.exec())

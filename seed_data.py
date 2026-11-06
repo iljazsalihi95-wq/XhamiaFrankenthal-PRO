@@ -1,7 +1,7 @@
 """Import official Google Sheets snapshots bundled with the Windows installer.
 Preserves source rows, does not synthesize payments or balances.
 """
-import json, sys
+import json, re, sys
 from pathlib import Path
 from datetime import datetime
 
@@ -48,5 +48,11 @@ def seed(db):
                 rr=list(row)+[""]*10
                 date,desc,account,category,amount,included=rr[:6]
                 notes=" | ".join(str(value) for value in rr[6:9] if value)
-            db.execute("INSERT OR IGNORE INTO source_finance VALUES (?,?,?,?,?,?,?,?,?)",(sheet,ix,normalized_date,str(desc),str(account),str(category),euros(amount),str(included),notes))
+            amount_cents=euros(amount)
+            if sheet.endswith("2025") and re.fullmatch(r"[+-]?\d{1,3}(?:\.\d{3})+\s*€", str(amount).strip()):
+                amount_cents=euros(str(amount).replace(".",""))
+                db.execute("""UPDATE source_finance SET amount_cents=?
+                              WHERE source_sheet=? AND source_row=? AND date=? AND description=? AND amount_cents=?""",
+                           (amount_cents,sheet,ix,normalized_date,str(desc),euros(amount)))
+            db.execute("INSERT OR IGNORE INTO source_finance VALUES (?,?,?,?,?,?,?,?,?)",(sheet,ix,normalized_date,str(desc),str(account),str(category),amount_cents,str(included),notes))
     db.commit()

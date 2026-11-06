@@ -72,6 +72,15 @@ class SourceTests(unittest.TestCase):
             ])
             self.assertEqual(summary(db, 2026)["Daljet"]["bank"] - before, 51000)
 
+    def test_2025_thousands_are_repaired_in_existing_source_cache(self):
+        with sqlite3.connect(":memory:") as db:
+            seed(db)
+            where = " WHERE source_sheet='Hyrjet 2025' AND source_row=4"
+            self.assertEqual(db.execute("SELECT amount_cents FROM source_finance"+where).fetchone()[0], 150000)
+            db.execute("UPDATE source_finance SET amount_cents=150"+where)
+            seed(db)
+            self.assertEqual(db.execute("SELECT amount_cents FROM source_finance"+where).fetchone()[0], 150000)
+
     def test_database(self):
         with sqlite3.connect(":memory:") as db:
             seed(db)
