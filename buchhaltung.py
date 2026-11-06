@@ -23,7 +23,7 @@ CATEGORIES = {
     "Sergji": "Sammlung", "Kthim borxhi": "Rückzahlung einer Forderung",
     "Gjendje fillestare": "Anfangsbestand", "Sergji - Kurban Bajram": "Sammlung zum Opferfest",
     "AOK": "AOK / Krankenkasse", "Blerje / Furnizime": "Einkäufe und Bedarf",
-    "Rroga e Hoxhës": "Imamvergütung und IT-Betreuung (Barzahlung; getrennte Leistungszuordnung)", "Nebenkosten": "Nebenkosten", "Pastrimi": "Reinigung",
+    "Rroga e Hoxhës": "Imamvergütung (Lohnzahlung prüfen)", "Nebenkosten": "Nebenkosten", "Pastrimi": "Reinigung",
     "Abrechnung / Banka": "Bankabrechnung", "Beratung / Kontabilitet": "Beratung und Buchhaltung",
     "Bajram": "Festveranstaltung", "Steuer / Finanzamt": "Steuern / Finanzamt",
     "Sparkasse": "Sparkasse",
@@ -74,7 +74,7 @@ def booking_rows(db, year):
                     (("donacion", "sadaka"), "Spenden"),
                     (("sergi", "sergj"), "Sammlung"),
                     (("nebenkosten", "nebenkisten"), "Nebenkosten"),
-                    (("rroga", "rrogen", "lohn"), "Imamvergütung und IT-Betreuung (Barzahlung; getrennte Leistungszuordnung)"),
+                    (("rroga", "rrogen", "lohn"), "Imamvergütung (Lohnzahlung prüfen)"),
                     (("aok",), "AOK / Krankenkasse"),
                     (("abrechnung",), "Abrechnung"),
                 ):
@@ -82,7 +82,7 @@ def booking_rows(db, year):
                         german = label
                         break
             default_text = f"{title}: {german}" if "prüfen" not in german else f"{title} laut Finanzregister"
-            if kind == "Daljet" and str(account).strip().lower() == "cash" and amount == 165000 and (category == "Rroga e Hoxhës" or "rroga" in str(original).casefold() or "imam" in str(original).casefold()):
+            if kind == "Daljet" and str(account).strip().lower() == "cash" and amount == 165000 and year == 2026 and (category == "Rroga e Hoxhës" or "rroga" in str(original).casefold() or "imam" in str(original).casefold()):
                 default_text = "Barzahlung aus der Moscheekasse: 1.650,00 EUR; Nettogehalt des Imams 1.398,22 EUR; Zusatzvergütung für IT-Betreuung, Softwarewartung und Serververwaltung 250,00 EUR; Differenz 1,78 EUR zur Abstimmung. Keine Bankbuchung."
             yield key, (day, title, {"cash": "Bar", "bank": "Bank"}.get(str(account).lower(), "Ungeklärt"),
                         german, money(amount),
@@ -209,9 +209,16 @@ class Buchhaltung(QDialog):
                               for r in self.db.execute("""SELECT id,category,name,added,booking
                                   FROM bookkeeping_document WHERE year=? ORDER BY id""", (year,))])
         totals = summary(self.db, year)
+        if month:
+            from ledger_totals import totals as ledger_sum
+            monthly = {}
+            for kind in ("Hyrjet", "Daljet"):
+                monthly[kind] = ledger_sum([r for r in records(self.db, year, kind)
+                                           if self._booking_month(r[0]) == month])
+            totals = monthly
         self.totals.setText(" · ".join(f"{title}: {money(sum(totals[kind][k] for k in ('cash','bank','other')))} €"
                                       for kind, title in (("Hyrjet", "Einnahmen"), ("Daljet", "Ausgaben")))
-                            + " · Stand laut Finanzregister")
+                            + (" · Monatswerte laut Finanzregister" if month else " · Jahreswerte laut Finanzregister"))
 
     def edit_text(self):
         row = self.book.currentRow()
