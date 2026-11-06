@@ -1,7 +1,7 @@
 import sys, sqlite3, os, datetime, hashlib, hmac, tempfile
 from pathlib import Path
 from PySide6.QtWidgets import QApplication,QMainWindow,QWidget,QVBoxLayout,QHBoxLayout,QLabel,QPushButton,QTableWidget,QTableWidgetItem,QComboBox,QFileDialog,QMessageBox,QLineEdit,QDialog,QFormLayout,QFrame,QDoubleSpinBox,QDateEdit,QScrollArea,QAbstractItemView,QStyle
-from PySide6.QtCore import Qt, QUrl, QSize, QDate
+from PySide6.QtCore import Qt, QUrl, QSize, QDate, QTimer
 from PySide6.QtGui import QPixmap, QIcon, QColor, QBrush, QDesktopServices
 from PySide6.QtWidgets import QHeaderView
 from PySide6.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkReply
@@ -517,9 +517,8 @@ QStatusBar{background:#082d55;color:white;font-weight:bold}
   self.apply_search()
  def show_balance(self):
   y=int(self.year.currentText())
-  from ledger_totals import summary, records, totals, exclusion, reconciliation as balance_summary
   try:
-   values=balance_summary(db,y)
+   values=summary(db,y)
    incoming=values["Hyrjet"];outgoing=values["Daljet"]
    cash=incoming["cash"]-outgoing["cash"]
    bank=incoming["bank"]-outgoing["bank"]
@@ -673,6 +672,15 @@ if __name__=="__main__":
   assert win.table.rowCount()>0 and win.stat_cards[3].isVisible()
   win.navigate("Anëtarësia")
   assert win.table.rowCount()>0
+  opened_dialogs=[]
+  def close_balance():
+   modal=app.activeModalWidget()
+   if modal:
+    opened_dialogs.append(modal.windowTitle())
+    modal.accept()
+  QTimer.singleShot(50,close_balance)
+  win.navigate("Bilanci")
+  assert opened_dialogs==["Bilanci ndër vite — 2026"]
   sys.exit(0)
  if login.exec()==QDialog.Accepted:
   win=Main();win.show();sys.exit(app.exec())
