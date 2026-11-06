@@ -2,7 +2,7 @@ import sys, sqlite3, os, shutil, datetime, hashlib, hmac, urllib.request, json
 from pathlib import Path
 from PySide6.QtWidgets import QApplication,QMainWindow,QWidget,QVBoxLayout,QHBoxLayout,QLabel,QPushButton,QTableWidget,QTableWidgetItem,QComboBox,QFileDialog,QMessageBox,QLineEdit,QDialog,QFormLayout,QFrame,QDoubleSpinBox
 from PySide6.QtCore import Qt, QUrl, QSize
-from PySide6.QtGui import QPixmap, QIcon
+from PySide6.QtGui import QPixmap, QIcon, QColor, QBrush
 from PySide6.QtWidgets import QHeaderView
 from seed_data import seed
 from finance_reports import report
@@ -81,7 +81,10 @@ class Main(QMainWindow):
   if not pic.isNull():self.setWindowIcon(QIcon(pic))
   w=QWidget();self.setCentralWidget(w);v=QVBoxLayout(w)
   v.setContentsMargins(22,16,22,18);v.setSpacing(14)
-  title=QLabel("✦  XHAMIA FRANKENTHAL PRO  ✦");title.setObjectName("heroTitle");title.setAlignment(Qt.AlignCenter);title.setMinimumHeight(92);v.addWidget(title)
+  self.hero=QLabel("XHAMIA FRANKENTHAL PRO\\nADMINISTRIMI I XHAMISË  •  REGJISTRIME DHE LLOGARITJE AUTOMATIKE")
+  self.hero.setObjectName("heroTitle");self.hero.setAlignment(Qt.AlignCenter);self.hero.setMinimumHeight(174);v.addWidget(self.hero)
+  self._hero_source=Path(getattr(sys,"_MEIPASS",Path(__file__).resolve().parent))/"assets"/"mosque_interior.jpg"
+  self._render_hero()
   body=QHBoxLayout();v.addLayout(body,1)
   sidebar=QFrame();sidebar.setObjectName("sidebar");sidebar.setFixedWidth(240)
   nav=QVBoxLayout(sidebar);nav.setContentsMargins(12,20,12,16);nav.setSpacing(10)
@@ -114,17 +117,23 @@ class Main(QMainWindow):
   actions=QHBoxLayout();work.addLayout(actions)
   for label,callback in (("Shto anëtar",self.add_member),("Bart anëtarët në vitin pasues",self.rollover_members),("Regjistro hyrje",lambda:self.add_transaction("Hyrjet")),("Regjistro dalje",lambda:self.add_transaction("Daljet"))):
    btn=QPushButton(label);btn.clicked.connect(callback);actions.addWidget(btn)
-  self.summary_label=QLabel("Raport nga të dhënat e importuara — pa rakordim bankar");work.addWidget(self.summary_label)
+  self.summary_label=QLabel("Raport nga të dhënat e importuara — pa rakordim bankar");self.summary_label.setObjectName("summary");work.addWidget(self.summary_label)
+  self.stats=QHBoxLayout();work.addLayout(self.stats)
+  self.stat_cards=[]
+  for label,color in (("CASH","#0c8b5d"),("BANK","#1766ad"),("TË PAKLASIFIKUARA","#7548b7"),("TOTALI","#c88a16")):
+   card=QLabel(label+"\\n—");card.setAlignment(Qt.AlignCenter);card.setObjectName("statCard")
+   card.setStyleSheet(f"QLabel#statCard{{background:{color};color:white;border-radius:12px;padding:10px;font-weight:800;font-size:16px;min-height:60px}}")
+   self.stats.addWidget(card);self.stat_cards.append(card)
   self.table=QTableWidget();self.table.setAlternatingRowColors(True);self.table.setMinimumHeight(390);self.table.verticalHeader().setDefaultSectionSize(43);self.table.verticalHeader().setVisible(False);self.table.setWordWrap(False);work.addWidget(self.table,3);self.mode.currentIndexChanged.connect(self.load);self.year.currentIndexChanged.connect(self.load)
   self.setStyleSheet("""
 QMainWindow,QWidget{background:#eaf2fc;color:#102d50;font-family:'Segoe UI';font-size:13px}
-QLabel#heroTitle{background:qlineargradient(x1:0,y1:0,x2:1,y2:0,stop:0 #052744,stop:.48 #075082,stop:1 #10345d);color:#f6d47e;font-size:30px;font-weight:900;border-bottom:4px solid #d5a83c;border-radius:14px;padding:16px}
+QLabel#heroTitle{background:qlineargradient(x1:0,y1:0,x2:1,y2:0,stop:0 #052744,stop:.48 #075082,stop:1 #10345d);color:#f6d47e;font-size:30px;font-weight:900;border-bottom:5px solid #d5a83c;border-radius:16px;padding:16px}
 QFrame#sidebar{background:#082d55;border:2px solid #d4ae55;border-radius:17px}
 QFrame#sidebar QLabel{background:transparent;color:#f3d17c}
 QPushButton{background:#0864a2;border:1px solid #75b4e1;border-radius:10px;padding:11px;color:white;font-weight:700;font-size:13px;min-height:20px}
 QPushButton:hover{background:#1883cc;border-color:#f0bf55}
 QPushButton#navButton{background:#064373;text-align:left;padding-left:19px;font-size:15px;min-height:30px;border:1px solid #4da4d9}
-QPushButton#navButton:hover{background:#d8a02d;color:#082e50}
+QPushButton#navButton:hover{background:#d8a02d;color:#082e50}\nQLabel#summary{background:#d9eafa;color:#07385e;padding:10px;border:1px solid #8cbbe1;border-radius:10px;font-size:14px;font-weight:800}
 QComboBox,QLineEdit{background:#fff;border:2px solid #a3c6e4;border-radius:9px;padding:9px;color:#10365b;min-height:22px}
 QTableWidget{font-size:14px;background:#fff;alternate-background-color:#dceafb;gridline-color:#bfd5ec;selection-background-color:#86c5f3;selection-color:#06284b;border:2px solid #a7c8e5;border-radius:12px}
 QTableWidget::item{padding:7px}
@@ -138,6 +147,26 @@ QStatusBar{background:#082d55;color:white;font-weight:bold}
   self.month_filter.currentIndexChanged.connect(self.apply_search)
   self.date_filter.textChanged.connect(self.apply_search)
   self.load()
+ def resizeEvent(self,event):
+  super().resizeEvent(event)
+  self._render_hero()
+ def _render_hero(self):
+  if not hasattr(self,"hero"):return
+  if self._hero_source.exists():
+   photo=QPixmap(str(self._hero_source))
+   if not photo.isNull():
+    from PySide6.QtGui import QPainter,QLinearGradient
+    canvas=photo.scaled(max(900,self.hero.width()),174,Qt.KeepAspectRatioByExpanding,Qt.SmoothTransformation)
+    canvas=canvas.copy((canvas.width()-max(900,self.hero.width()))//2,0,max(900,self.hero.width()),174)
+    painter=QPainter(canvas)
+    gradient=QLinearGradient(0,0,canvas.width(),0)
+    gradient.setColorAt(0,QColor(2,30,61,235));gradient.setColorAt(.45,QColor(2,37,76,160));gradient.setColorAt(1,QColor(3,35,70,185))
+    painter.fillRect(canvas.rect(),gradient);painter.end()
+    self.hero.setPixmap(canvas)
+    self.hero.setText("")
+    self.hero.setToolTip("XHAMIA FRANKENTHAL PRO")
+    return
+  self.hero.setText("XHAMIA FRANKENTHAL PRO\\nADMINISTRIMI I XHAMISË • REGJISTRIME DHE LLOGARITJE AUTOMATIKE")
  def rollover_members(self):
   source=int(self.year.currentText())
   if source>=2050:
@@ -351,6 +380,16 @@ QStatusBar{background:#082d55;color:white;font-weight:bold}
    header.setSectionResizeMode(1,QHeaderView.Interactive)
    self.table.setColumnWidth(1,280)
   self.apply_search()
+  if mode in ("Hyrjet","Daljet"):
+   from seed_data import euros
+   cash=sum(euros(row[4]) for row in rows if str(row[2]).strip().casefold()=="cash")
+   bank=sum(euros(row[4]) for row in rows if str(row[2]).strip().casefold()=="bank")
+   other=sum(euros(row[4]) for row in rows if str(row[2]).strip().casefold() not in ("cash","bank"))
+   values=(cash,bank,other,cash+bank+other)
+   for label,card,value in zip(("CASH","BANK","TË PAKLASIFIKUARA","TOTALI"),self.stat_cards,values):
+    card.setText(f"{label}\\n{value/100:,.2f} €")
+  else:
+   for card in self.stat_cards:card.setText("ANËTARËSIA\\nShih tabelën")
   self.statusBar().showMessage(f"{len(rows)} regjistrime · {mode} · {y}")
   if mode!="Anëtarësia":
    totals=summary(db,y)
