@@ -1,8 +1,9 @@
 """Import official Google Sheets snapshots bundled with the Windows installer.
 Preserves source rows, does not synthesize payments or balances.
 """
-import json, re, sys
+import json, sys
 from pathlib import Path
+from datetime import datetime
 
 def euros(value):
     s=str(value or "").replace("€","").replace("\u00a0","").replace(" ","").strip()
@@ -27,12 +28,18 @@ def seed(db):
             for m in range(1,13):
                 raw=str(row[3+m] or "")
                 db.execute("INSERT OR IGNORE INTO source_months VALUES (?,?,?,?,?)",(year,ix,m,euros(raw),raw))
+    has_sync=db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='source_sync'").fetchone()
     for sheet in ("Hyrjet","Daljet","Hyrjet 2025","Daljet 2025","Hyrjet 2027","Daljet 2027"):
+        if has_sync and sheet in ("Hyrjet","Daljet"):continue
         path=base/(sheet.replace(" ","_")+".json")
         if not path.exists():continue
         rows=json.loads(path.read_text(encoding="utf-8"))["rows"]
         for ix,row in enumerate(rows,start=1):
-            if len(row)<4 or not re.match(r"^\d{2}\.\d{2}\.\d{4}$",str(row[0])):continue
+            if len(row)<4:continue
+            try:
+                normalized_date=datetime.strptime(str(row[0]).replace("/", "."), "%d.%m.%Y").strftime("%d.%m.%Y")
+            except ValueError:
+                continue
             if sheet.endswith("2025"):
                 date,desc,bank,amount=row[:4]
                 account="Bank" if str(bank).upper()=="TRUE" else "Cash"
@@ -41,5 +48,5 @@ def seed(db):
                 rr=list(row)+[""]*10
                 date,desc,account,category,amount,included=rr[:6]
                 notes=str(rr[7] or "")
-            db.execute("INSERT OR IGNORE INTO source_finance VALUES (?,?,?,?,?,?,?,?,?)",(sheet,ix,str(date),str(desc),str(account),str(category),euros(amount),str(included),notes))
+            db.execute("INSERT OR IGNORE INTO source_finance VALUES (?,?,?,?,?,?,?,?,?)",(sheet,ix,normalized_date,str(desc),str(account),str(category),euros(amount),str(included),notes))
     db.commit()

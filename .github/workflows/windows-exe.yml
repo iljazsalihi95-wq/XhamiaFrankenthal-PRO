@@ -15,12 +15,17 @@ jobs:
         run: python -m pip install -r requirements.txt pillow
       - name: Validate Python source and bundled records
         run: |
-          python -m py_compile app.py seed_data.py finance_reports.py ledger_totals.py receipts.py membership_rollover.py
+          python -m compileall -q -l .
           python -c "import json, pathlib; files=list(pathlib.Path('data').glob('*.json')); assert len(files)>=9; [json.loads(p.read_text(encoding='utf-8')) for p in files]; print('Validated',len(files),'source snapshots')"
       - name: Test source imports and financial summaries
         run: python -m unittest -v test_sources
       - name: Prepare official mosque branding
         run: python build_icon.py
+      - name: Check Qt interface and bundled branding
+        shell: pwsh
+        run: |
+          $env:APPDATA = Join-Path $env:RUNNER_TEMP "xhamia-source-smoke"
+          python app.py --smoke-test
       - name: Build desktop executable
         run: python -m PyInstaller --noconfirm --onefile --windowed --name XhamiaFrankenthalPRO --icon "assets/mosque.ico" --add-data "assets;assets" --add-data "data;data" app.py
       - name: Smoke test EXE presence
@@ -37,6 +42,21 @@ jobs:
           $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
           if (!(Test-Path $iscc)) { throw "Inno Setup compiler missing" }
           & $iscc installer.iss
+      - name: Install and launch the packaged Windows application
+        shell: pwsh
+        run: |
+          $installDir = Join-Path $env:RUNNER_TEMP "Xhamia Installed"
+          $setup = Start-Process -FilePath "./installer/XhamiaFrankenthalPRO-Setup.exe" -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /DIR=`"$installDir`"" -Wait -PassThru
+          if ($setup.ExitCode -ne 0) { throw "Installer failed: $($setup.ExitCode)" }
+          $exe = Join-Path $installDir "XhamiaFrankenthalPRO.exe"
+          if (!(Test-Path $exe) -or !(Test-Path (Join-Path $installDir "mosque.ico"))) { throw "Installed files are missing" }
+          $env:APPDATA = Join-Path $env:RUNNER_TEMP "xhamia-installed-smoke"
+          $app = Start-Process -FilePath $exe -ArgumentList "--smoke-test" -PassThru
+          if (!$app.WaitForExit(120000)) {
+            $app.Kill()
+            throw "Installed application did not finish its smoke test"
+          }
+          if ($app.ExitCode -ne 0) { throw "Installed application failed: $($app.ExitCode)" }
       - uses: actions/upload-artifact@v4
         with:
           name: XhamiaFrankenthalPRO-Installer
