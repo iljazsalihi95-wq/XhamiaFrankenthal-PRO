@@ -17,6 +17,8 @@ jobs:
         run: |
           python -m compileall -q -l .
           python -c "import json, pathlib; files=list(pathlib.Path('data').glob('*.json')); assert len(files)>=9; [json.loads(p.read_text(encoding='utf-8')) for p in files]; print('Validated',len(files),'source snapshots')"
+      - name: Check annual certificate template
+        run: python -c "from pathlib import Path; p=Path('templates/anlage14_jahreszahlungen.html'); t=p.read_text(encoding='utf-8'); assert 'Anlage 14' in t and 'Sammelbestätigung' in t"
       - name: Test source imports and financial summaries
         run: python -m unittest -v test_sources
       - name: Prepare official mosque branding
@@ -27,7 +29,7 @@ jobs:
           $env:APPDATA = Join-Path $env:RUNNER_TEMP "xhamia-source-smoke"
           python app.py --smoke-test
       - name: Build desktop executable
-        run: python -m PyInstaller --noconfirm --onefile --windowed --name XhamiaFrankenthalPRO --icon "assets/mosque.ico" --add-data "assets;assets" --add-data "data;data" app.py
+        run: python -m PyInstaller --noconfirm --onefile --windowed --name XhamiaFrankenthalPRO --icon "assets/mosque.ico" --add-data "assets;assets" --add-data "data;data" --add-data "templates;templates" app.py
       - name: Smoke test EXE presence
         shell: pwsh
         run: |
