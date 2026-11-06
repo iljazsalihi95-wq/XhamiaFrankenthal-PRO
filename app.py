@@ -137,7 +137,7 @@ class Main(QMainWindow):
   for name,icon in (
    ("Ballina",QStyle.SP_DirHomeIcon),("Anëtarësia",QStyle.SP_DirOpenIcon),
    ("Hyrjet",QStyle.SP_ArrowDown),("Daljet",QStyle.SP_ArrowUp),
-   ("Bilanci",QStyle.SP_ComputerIcon),("Buchhaltung",QStyle.SP_FileDialogDetailedView),("Dëftesat",QStyle.SP_FileIcon),
+   ("Bilanci",QStyle.SP_ComputerIcon),("Buchhaltung",QStyle.SP_FileDialogDetailedView),("Dëftesat",QStyle.SP_FileIcon),("Vërtetimi i pagesave vjetore",QStyle.SP_FileDialogDetailedView),
    ("Hudbe & Derse",QStyle.SP_DirIcon),("Historiku",QStyle.SP_FileDialogInfoView),
    ("Rregullorja",QStyle.SP_FileIcon),("Mbledhjet",QStyle.SP_DirIcon),
    ("Procesverbalet",QStyle.SP_FileIcon),("Cilësimet",QStyle.SP_FileDialogDetailedView)
@@ -390,10 +390,21 @@ QStatusBar QLabel{color:white}
    self.show_balance()
   elif name=="Dëftesat":
    self.receipt_pdf()
+  elif name=="Vërtetimi i pagesave vjetore":
+   self.open_annual_payment_confirmation()
   elif name=="Cilësimet":
    self.open_settings()
   elif name!="Ballina":
    self.open_documents(name)
+ def open_annual_payment_confirmation(self):
+  """Open the supplied Anlage 14 template; do not generate unverified payments."""
+  bundle_root=Path(getattr(sys,"_MEIPASS",Path(__file__).resolve().parent))
+  template=bundle_root/"templates"/"anlage14_jahreszahlungen.html"
+  if not template.is_file():
+   QMessageBox.warning(self,"Anlage 14","HTML-Vorlage fehlt im Programmpaket.")
+   return
+  QDesktopServices.openUrl(QUrl.fromLocalFile(str(template)))
+
  def open_settings(self):
   dialog=QDialog(self);dialog.setWindowTitle("Cilësimet dhe burimet zyrtare")
   layout=QVBoxLayout(dialog)
