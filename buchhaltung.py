@@ -23,10 +23,11 @@ CATEGORIES = {
     "Sergji": "Sammlung", "Kthim borxhi": "Rückzahlung einer Forderung",
     "Gjendje fillestare": "Anfangsbestand", "Sergji - Kurban Bajram": "Sammlung zum Opferfest",
     "AOK": "AOK / Krankenkasse", "Blerje / Furnizime": "Einkäufe und Bedarf",
-    "Rroga e Hoxhës": "Imamvergütung", "Nebenkosten": "Nebenkosten", "Pastrimi": "Reinigung",
+    "Rroga e Hoxhës": "Imamvergütung und IT-Betreuung (Barzahlung; getrennte Leistungszuordnung)", "Nebenkosten": "Nebenkosten", "Pastrimi": "Reinigung",
     "Abrechnung / Banka": "Bankabrechnung", "Beratung / Kontabilitet": "Beratung und Buchhaltung",
     "Bajram": "Festveranstaltung", "Steuer / Finanzamt": "Steuern / Finanzamt",
-    "Sparkasse": "Sparkasse", "Borxh / Forderung": "Offene Forderung / Bankabgang",
+    "Sparkasse": "Sparkasse",
+    "Mirëmbajtja e programit": "IT-Betreuung, Softwarewartung, Serververwaltung und technische Dienstleistungen", "Borxh / Forderung": "Offene Forderung / Bankabgang",
     "Transfer i brendshëm – financim rroge": "Interne Umbuchung zur Lohnfinanzierung",
 }
 EXCLUSIONS = {
@@ -73,7 +74,7 @@ def booking_rows(db, year):
                     (("donacion", "sadaka"), "Spenden"),
                     (("sergi", "sergj"), "Sammlung"),
                     (("nebenkosten", "nebenkisten"), "Nebenkosten"),
-                    (("rroga", "rrogen", "lohn"), "Imamvergütung"),
+                    (("rroga", "rrogen", "lohn"), "Imamvergütung und IT-Betreuung (Barzahlung; getrennte Leistungszuordnung)"),
                     (("aok",), "AOK / Krankenkasse"),
                     (("abrechnung",), "Abrechnung"),
                 ):
