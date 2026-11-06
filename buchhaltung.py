@@ -82,6 +82,8 @@ def booking_rows(db, year):
                         german = label
                         break
             default_text = f"{title}: {german}" if "prüfen" not in german else f"{title} laut Finanzregister"
+            if kind == "Daljet" and str(account).strip().lower() == "cash" and amount == 165000 and (category == "Rroga e Hoxhës" or "rroga" in str(original).casefold() or "imam" in str(original).casefold()):
+                default_text = "Barzahlung aus der Moscheekasse: 1.650,00 EUR; Nettogehalt des Imams 1.398,22 EUR; Zusatzvergütung für IT-Betreuung, Softwarewartung und Serververwaltung 250,00 EUR; Differenz 1,78 EUR zur Abstimmung. Keine Bankbuchung."
             yield key, (day, title, {"cash": "Bar", "bank": "Bank"}.get(str(account).lower(), "Ungeklärt"),
                         german, money(amount),
                         EXCLUSIONS.get(reason, "Berücksichtigt"), texts.get(key, default_text),
