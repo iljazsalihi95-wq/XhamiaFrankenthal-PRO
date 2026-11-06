@@ -318,7 +318,12 @@ QStatusBar{background:#082d55;color:white;font-weight:bold}
    visible=matches_text and matches_date and matches_month
    self.table.setRowHidden(i,not visible)
    visible_count+=int(visible)
-  self.statusBar().showMessage(f"{visible_count} nga {self.table.rowCount()} regjistrime · {mode} · {year}")
+  source=""
+  if mode!="Anëtarësia" and year==2026:
+   has_sync=db.execute("SELECT 1 FROM sqlite_master WHERE name='source_sync'").fetchone()
+   stamp=db.execute("SELECT synced_at FROM source_sync WHERE id=1").fetchone() if has_sync else None
+   source=f" · Importuar {stamp[0].replace('T',' ')}" if stamp else " · Kopje e paketuar"
+  self.statusBar().showMessage(f"{visible_count} nga {self.table.rowCount()} regjistrime · {mode} · {year}{source}")
   financial=mode!="Anëtarësia"
   for field in (self.date_from,self.date_to):field.setEnabled(financial)
   for card in self.stat_cards:card.setVisible(financial)
@@ -625,10 +630,17 @@ QStatusBar{background:#082d55;color:white;font-weight:bold}
   try:
    with open(p,encoding="utf-8-sig",newline="") as f:rows=list(csv.reader(f))
    y=int(self.year.currentText());mode=self.mode.currentText()
-   for row in rows[1:]:
-    if mode=="Anëtarësia" and len(row)>=16:db.execute("INSERT INTO members VALUES ("+",".join(["?"]*17)+")",[y]+row[:16])
-    elif mode!="Anëtarësia" and len(row)>=5:db.execute("INSERT INTO finance VALUES (?,?,?,?,?,?,?)",[y,mode]+row[:5])
-   db.commit();self.load()
+   with db:
+    for row in rows[1:]:
+     if not any(row):continue
+     if mode=="Anëtarësia" and len(row)>=16:
+      db.execute("INSERT INTO members VALUES ("+",".join(["?"]*17)+")",[y]+row[:16])
+     elif mode!="Anëtarësia" and len(row)>=5:
+      date=datetime.datetime.strptime(row[0].strip(),"%d.%m.%Y")
+      if date.year!=y:raise ValueError(f"Data {row[0]} nuk i përket vitit {y}.")
+      db.execute("INSERT INTO finance VALUES (?,?,?,?,?,?,?)",[y,mode,date.strftime("%d.%m.%Y")]+row[1:5])
+     else:raise ValueError("Kolonat e CSV-së nuk përputhen me rubrikën e hapur.")
+   self.load()
   except Exception as e:QMessageBox.critical(self,"Importi",str(e))
  def pdf(self):
   p,_=QFileDialog.getSaveFileName(self,"Ruaj PDF",f"{self.mode.currentText()}_{self.year.currentText()}.pdf","PDF (*.pdf)")
@@ -648,6 +660,8 @@ if __name__=="__main__":
  if "--smoke-test" in sys.argv:
   win=Main();win.show();app.processEvents()
   assert not mosque_logo().isNull() and not login.windowIcon().isNull()
+  assert not QPixmap(str(ASSETS/"mosque_interior.jpg")).isNull()
+  assert win.hero.pixmap() and not win.hero.pixmap().isNull()
   assert win.table.rowCount()>0 and len(win.nav_buttons)==12
   win.navigate("Daljet")
   assert win.table.rowCount()>0 and win.stat_cards[3].isVisible()

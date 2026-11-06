@@ -4,7 +4,9 @@ import tempfile
 import unittest
 from pathlib import Path
 from seed_data import seed, euros
-from ledger_totals import summary
+from ledger_totals import summary, totals
+from sheet_source import import_workbook
+from openpyxl import Workbook
 
 class SourceTests(unittest.TestCase):
     def test_currency(self):
@@ -24,6 +26,39 @@ class SourceTests(unittest.TestCase):
             db.execute("INSERT INTO finance VALUES (?,?,?,?,?,?,?)",(2026,"Hyrjet","05.11.2026","Test payment","Cash","Donacion","25.50"))
             after=summary(db,2026)["Hyrjet"]["cash"]
             self.assertEqual(after-before,2550)
+    def test_exclusion_and_shared_totals(self):
+        rows = [
+            ("01.01.2026", "Saldo", "Bank", "Gjendje fillestare", 92000, "Po", 1),
+            ("01.01.2026", "Depozitim", "Bank", "Transfer i brendshëm", 10000, "Po", 2),
+            ("01.01.2026", "Anëtarësi LIVE", "Cash", "Anëtarësia", 2000, "Po", 3),
+            ("01.01.2026", "Pagesë individuale", "Cash", "Anëtarësia", 2000, "Jo", 4),
+        ]
+        self.assertEqual(totals(rows), dict(count=1, cash=2000, bank=0, other=0, excluded=3))
+
+    def test_refresh_preserves_manual_rows_and_survives_reopen(self):
+        with tempfile.TemporaryDirectory() as directory, sqlite3.connect(":memory:") as db:
+            seed(db)
+            db.execute("CREATE TABLE finance(year INTEGER,kind TEXT,date TEXT,description TEXT,method TEXT,category TEXT,amount TEXT)")
+            db.execute("INSERT INTO finance VALUES (2026,'Hyrjet','01.01.2026','Lokal','Cash','Donacion','3.50')")
+            db.commit()
+            workbook = Workbook()
+            workbook.remove(workbook.active)
+            for kind in ("Hyrjet", "Daljet"):
+                tab = workbook.create_sheet(kind)
+                tab.append([kind])
+                tab.append([])
+                tab.append(["Data", "Përshkrimi", "Cash/Bank", "Kategoria", "Shuma", "Përfshi?"])
+                tab.append(["14/08/2026", "Nga burimi", "Cash", "Donacion", 1, "Po"])
+            for tab in ("Gjendja", "BILANCI MASTER", "Rakordimi i saktë 2026"):
+                workbook.create_sheet(tab).append(["Bilanci"])
+            path = Path(directory) / "source.xlsx"
+            workbook.save(path)
+            backup = import_workbook(db, path, directory)
+            seed(db)
+            self.assertTrue(backup.is_file())
+            self.assertEqual(summary(db, 2026)["Hyrjet"]["cash"], 450)
+            self.assertEqual(summary(db, 2026)["Daljet"]["cash"], 100)
+
     def test_database(self):
         with sqlite3.connect(":memory:") as db:
             seed(db)
