@@ -115,6 +115,10 @@ class Buchhaltung(QDialog):
         self.year.addItems(("2025", "2026"))
         self.year.setCurrentText(str(year) if year in (2025, 2026) else "2026")
         header.addWidget(self.year)
+        header.addWidget(QLabel("Buchungsmonat"))
+        self.month = QComboBox()
+        self.month.addItems(("Alle Monate", "Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"))
+        header.addWidget(self.month)
         self.totals = QLabel()
         header.addWidget(self.totals, 1)
         self.button(header, "Jahresmappe exportieren", self.export)
@@ -153,6 +157,7 @@ class Buchhaltung(QDialog):
         tax_layout.addStretch()
         tabs.addTab(tax, "Amtliche Formulare")
         self.year.currentTextChanged.connect(self.reload)
+        self.month.currentIndexChanged.connect(self.reload)
         self.reload()
 
     @staticmethod
@@ -188,9 +193,16 @@ class Buchhaltung(QDialog):
     def selected_year(self):
         return int(self.year.currentText())
 
+    @staticmethod
+    def _booking_month(value):
+        parts = str(value).replace("/", ".").split(".")
+        return int(parts[1]) if len(parts) == 3 and parts[1].isdigit() else 0
+
     def reload(self):
         year = self.selected_year
-        rows = list(booking_rows(self.db, year))
+        all_rows = list(booking_rows(self.db, year))
+        month = self.month.currentIndex()
+        rows = [entry for entry in all_rows if not month or self._booking_month(entry[1][0]) == month]
         self.fill(self.book, rows)
         sources = {key: row[8] for key, row in rows}
         self.fill(self.docs, [(r[0], (*r[:4], sources.get(r[4], "Zuordnung prüfen") if r[4] else "Jahresbeleg"))
