@@ -84,6 +84,14 @@ def booking_rows(db, year):
             default_text = f"{title}: {german}" if "prüfen" not in german else f"{title} laut Finanzregister"
             if kind == "Daljet" and str(account).strip().lower() == "cash" and amount == 164822 and year == 2026 and (category == "Rroga e Hoxhës" or "rroga" in str(original).casefold() or "imam" in str(original).casefold()):
                 default_text = "Barzahlung aus der Moscheekasse: 1.648,22 EUR; Nettogehalt des Imams 1.398,22 EUR; Zusatzvergütung für IT-Betreuung, Softwarewartung und Serververwaltung 250,00 EUR. Keine Bankbuchung."
+            if year == 2025:
+                default_text = f"{title}: {original} (Originaleintrag 2025)"
+            elif year == 2026 and kind == "Daljet":
+                desc = str(original).casefold()
+                if str(account).casefold() == "cash" and amount == 25000 and ("rrog" in desc or "imam" in desc):
+                    default_text = "Barzahlung: Zusatzvergütung 250,00 EUR für IT-Betreuung, Softwarewartung und Serververwaltung (2026)."
+                elif str(account).casefold() == "bank" and amount in (139800, 139822) and ("rrog" in desc or "lohn" in desc or category == "Rroga e Hoxhës"):
+                    default_text = f"Bankzahlung: Nettogehalt des Imams {money(amount)} EUR laut Finanzregister; Lohnabrechnung 1.398,22 EUR (2026)."
             yield key, (day, title, {"cash": "Bar", "bank": "Bank"}.get(str(account).lower(), "Ungeklärt"),
                         german, money(amount),
                         EXCLUSIONS.get(reason, "Berücksichtigt"), texts.get(key, default_text),
