@@ -1,7 +1,8 @@
 import sys, sqlite3, os, datetime, hashlib, hmac, tempfile, shutil
 from pathlib import Path
-from PySide6.QtWidgets import QApplication,QMainWindow,QWidget,QVBoxLayout,QHBoxLayout,QLabel,QPushButton,QTableWidget,QTableWidgetItem,QComboBox,QFileDialog,QMessageBox,QLineEdit,QDialog,QFormLayout,QFrame,QDoubleSpinBox,QDateEdit,QScrollArea,QAbstractItemView,QStyle,QSizePolicy
-from PySide6.QtCore import Qt, QUrl, QSize, QDate, QTimer
+from PySide6.QtWidgets import QApplication,QMainWindow,QWidget,QVBoxLayout,QHBoxLayout,QLabel,QPushButton,QTableWidget,QTableWidgetItem,QComboBox,QFileDialog,QMessageBox,QLineEdit,QDialog,QFormLayout,QFrame,QDoubleSpinBox,QDateEdit,QMenu,QScrollArea,QAbstractItemView,QStyle,QSizePolicy
+from PySide6.QtSvg import QSvgRenderer
+from PySide6.QtCore import QByteArray, Qt, QUrl, QSize, QDate, QTimer, QRectF
 from PySide6.QtGui import QPixmap, QIcon, QColor, QBrush, QDesktopServices, QPainter, QPainterPath, QLinearGradient
 from PySide6.QtWidgets import QHeaderView
 from PySide6.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkReply
@@ -103,47 +104,115 @@ class Login(QDialog):
    self.error.setText("Përdoruesi ose fjalëkalimi nuk përputhet.")
    self.p.setFocus();self.p.selectAll()
 
+NAV_SYMBOLS={
+ "Ballina":"M2 11l10-9 10 9M5 10v11h5v-7h4v7h5V10",
+ "Anëtarësia":"M12 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6M5 11a2 2 0 1 0 0-4M19 11a2 2 0 1 0 0-4M6 21v-3a6 6 0 0 1 12 0v3zM2 20v-3a4 4 0 0 1 3-4m17 7v-3a4 4 0 0 0-3-4",
+ "Hyrjet":"M3 7a9 4 0 1 0 18 0 9 4 0 1 0-18 0m0 0v11c0 5 18 5 18 0V7M3 11c0 5 18 5 18 0M3 15c0 5 18 5 18 0",
+ "Daljet":"M7 21V3L2 8m5-5 5 5m5-5v18l-5-5m5 5 5-5",
+ "Bilanci":"M3 21v-7h4v7zm7 0V9h4v12zm7 0V3h4v18z",
+ "Dëftesat":"M5 2h9l5 5v15H5zM14 2v6h5M8 12h8m-8 4h8",
+ "Hudbe & Derse":"M12 5v16m0 0c-3-3-6-4-10-3V3c4-1 7 0 10 2 3-2 6-3 10-2v15c-4-1-7 0-10 3",
+ "Cilësimet":"M9 3h6l1 3 3 1 2 4-2 2v4l-4 3-3-1-3 1-4-3v-4l-2-2 2-4 3-1zM15 12a3 3 0 1 0-6 0 3 3 0 0 0 6 0",
+}
+
+def symbol_icon(name):
+ path=NAV_SYMBOLS[name]
+ color="#fb4d51" if name=="Daljet" else "#f6faff"
+ svg=f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="{path}" fill="none" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+ renderer=QSvgRenderer(QByteArray(svg.encode()))
+ canvas=QPixmap(64,64);canvas.fill(Qt.transparent)
+ painter=QPainter(canvas);renderer.render(painter);painter.end()
+ return QIcon(canvas)
+
+class MosqueHeader(QWidget):
+ def __init__(self,logo):
+  super().__init__()
+  self.photo=QPixmap(str(ASSETS/"reference_panorama.jpg"))
+  self.setFixedHeight(287)
+  self.title=QLabel("XHAMIA FRANKENTHAL PRO",self)
+  self.title.setObjectName("heroTitle")
+  self.title.setAlignment(Qt.AlignCenter)
+  self.subtitle=QLabel("ADMINISTRIMI I XHAMISË   •   REGJISTRIME DHE LLOGARITJE AUTOMATIKE",self)
+  self.subtitle.setObjectName("tagline")
+  self.subtitle.setAlignment(Qt.AlignCenter)
+  self.emblem=QLabel(self)
+  self.emblem.setAlignment(Qt.AlignCenter)
+  # The official asset includes the photographic surroundings of the seal.
+  seal=QPixmap(184,184);seal.fill(Qt.transparent)
+  painter=QPainter(seal);painter.setRenderHint(QPainter.Antialiasing)
+  circle=QPainterPath();circle.addEllipse(QRectF(1,1,182,182))
+  painter.setClipPath(circle)
+  painter.drawPixmap(QRectF(0,0,184,184),logo,QRectF(3,13,350,345))
+  painter.end()
+  self.emblem.setPixmap(seal)
+  self.association=QLabel("ISLAMISCHER VEREIN\nFRANKENTHAL e.V.",self)
+  self.association.setObjectName("association")
+  self.association.setAlignment(Qt.AlignCenter)
+
+ def resizeEvent(self,event):
+  super().resizeEvent(event)
+  width=self.width()-250
+  self.emblem.setGeometry(0,0,250,187)
+  self.association.setGeometry(0,188,250,52)
+  self.title.setGeometry(250,201,width,53)
+  self.title.setStyleSheet(f"font-size:{min(39, width//21)}px")
+  self.subtitle.setStyleSheet(f"font-size:{min(16, width//69)}px")
+  self.subtitle.setGeometry(250,250,width,33)
+
+ def paintEvent(self,event):
+  painter=QPainter(self);painter.setRenderHint(QPainter.Antialiasing)
+  painter.setRenderHint(QPainter.SmoothPixmapTransform)
+  painter.scale(self.width()/1536,1)
+  blue=QLinearGradient(0,0,0,287)
+  blue.setColorAt(0,QColor("#031f40"));blue.setColorAt(1,QColor("#075084"))
+  painter.fillRect(QRectF(0,0,1536,287),blue)
+  painter.save()
+  edge=QPainterPath()
+  edge.moveTo(251,0);edge.lineTo(1536,0);edge.lineTo(1536,121)
+  edge.cubicTo(1450,217,1320,252,1180,253)
+  edge.lineTo(525,253);edge.cubicTo(408,190,342,222,251,241)
+  edge.closeSubpath()
+  painter.setClipPath(edge)
+  painter.drawPixmap(QRectF(251,0,1285,210),self.photo,QRectF(self.photo.rect()))
+  fade=QLinearGradient(0,174,0,211)
+  fade.setColorAt(0,QColor(4,53,91,0));fade.setColorAt(1,QColor("#04355b"))
+  painter.fillRect(QRectF(251,174,1285,37),fade)
+  painter.restore()
+  ribbon=QPainterPath()
+  ribbon.moveTo(0,205);ribbon.cubicTo(158,330,337,149,528,254)
+  ribbon.cubicTo(346,177,161,342,0,205)
+  ribbon.moveTo(1180,253);ribbon.cubicTo(1330,248,1460,203,1536,121)
+  ribbon.lineTo(1536,151);ribbon.cubicTo(1450,228,1330,258,1180,253)
+  gold=QLinearGradient(0,198,0,270)
+  gold.setColorAt(0,QColor("#ffeb9c"));gold.setColorAt(.65,QColor("#f9d878"));gold.setColorAt(1,QColor("#b98424"))
+  painter.fillPath(ribbon,gold)
+
 class Main(QMainWindow):
  def __init__(self):
-  super().__init__();self.setWindowTitle("Xhamia Frankenthal PRO — Administrimi i Xhamisë");self.resize(1500,880);self.setMinimumSize(1120,700)
+  super().__init__();self.setWindowTitle("Xhamia Frankenthal PRO — Administrimi i Xhamisë");self.resize(1536,830);self.setMinimumSize(1080,690)
   pic=mosque_logo()
   if not pic.isNull():self.setWindowIcon(QIcon(pic))
   w=QWidget();self.setCentralWidget(w);v=QVBoxLayout(w)
   v.setContentsMargins(0,0,0,0);v.setSpacing(0)
-  top=QHBoxLayout();top.setSpacing(0);v.addLayout(top)
-  brand_box=QFrame();brand_box.setObjectName("brand");brand_box.setFixedSize(242,270)
-  brand_layout=QVBoxLayout(brand_box);brand_layout.setContentsMargins(6,5,6,7)
-  logo=QLabel();logo.setAlignment(Qt.AlignCenter)
-  if not pic.isNull():logo.setPixmap(pic.scaled(148,148,Qt.KeepAspectRatio,Qt.SmoothTransformation))
-  brand_layout.addWidget(logo,1)
-  brand=QLabel("ISLAMISCHER VEREIN\nFRANKENTHAL e.V.")
-  brand.setAlignment(Qt.AlignCenter);brand_layout.addWidget(brand)
-  top.addWidget(brand_box)
-  banner=QFrame();banner.setObjectName("banner");banner.setFixedHeight(270)
-  banner_layout=QVBoxLayout(banner);banner_layout.setContentsMargins(0,0,0,0);banner_layout.setSpacing(0)
-  self.hero=QLabel();self.hero.setAlignment(Qt.AlignCenter);self.hero.setMinimumSize(1,180);self.hero.setSizePolicy(QSizePolicy.Ignored,QSizePolicy.Expanding)
-  banner_layout.addWidget(self.hero,1)
-  heading=QLabel("XHAMIA FRANKENTHAL PRO");heading.setObjectName("heroTitle");heading.setAlignment(Qt.AlignCenter)
-  banner_layout.addWidget(heading)
-  tagline=QLabel("ADMINISTRIMI I XHAMISË  •  REGJISTRIME DHE LLOGARITJE AUTOMATIKE")
-  tagline.setObjectName("tagline");tagline.setAlignment(Qt.AlignCenter);banner_layout.addWidget(tagline)
-  top.addWidget(banner,1)
+  self.hero=MosqueHeader(pic);v.addWidget(self.hero)
   body=QHBoxLayout();body.setSpacing(7);body.setContentsMargins(0,0,8,5);v.addLayout(body,1)
   sidebar=QFrame();sidebar.setObjectName("sidebar")
-  scroll=QScrollArea();scroll.setWidgetResizable(True);scroll.setFixedWidth(242);scroll.setFrameShape(QFrame.NoFrame)
+  scroll=QScrollArea();scroll.setWidgetResizable(True);scroll.setFixedWidth(240);scroll.setFrameShape(QFrame.NoFrame)
   scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff);scroll.setWidget(sidebar)
-  nav=QVBoxLayout(sidebar);nav.setContentsMargins(6,6,6,6);nav.setSpacing(4)
+  nav=QVBoxLayout(sidebar);nav.setContentsMargins(13,0,3,6);nav.setSpacing(4)
   self.nav_buttons={}
   for name,icon in (
    ("Ballina",QStyle.SP_DirHomeIcon),("Anëtarësia",QStyle.SP_DirOpenIcon),
    ("Hyrjet",QStyle.SP_ArrowDown),("Daljet",QStyle.SP_ArrowUp),
-   ("Bilanci",QStyle.SP_ComputerIcon),("Buchhaltung",QStyle.SP_FileDialogDetailedView),("Dëftesat",QStyle.SP_FileIcon),("Vërtetimi i pagesave vjetore",QStyle.SP_FileDialogDetailedView),("Sistemi i Hoxhës",QStyle.SP_DirHomeIcon),
-   ("Hudbe & Derse",QStyle.SP_DirIcon),("Historiku",QStyle.SP_FileDialogInfoView),
+   ("Bilanci",QStyle.SP_ComputerIcon),("Dëftesat",QStyle.SP_FileIcon),
+   ("Hudbe & Derse",QStyle.SP_DirIcon),("Cilësimet",QStyle.SP_FileDialogDetailedView),
+   ("Buchhaltung",QStyle.SP_FileDialogDetailedView),("Vërtetimi i pagesave vjetore",QStyle.SP_FileDialogDetailedView),("Sistemi i Hoxhës",QStyle.SP_DirHomeIcon),("Historiku",QStyle.SP_FileDialogInfoView),
    ("Rregullorja",QStyle.SP_FileIcon),("Mbledhjet",QStyle.SP_DirIcon),
-   ("Procesverbalet",QStyle.SP_FileIcon),("Cilësimet",QStyle.SP_FileDialogDetailedView)
+   ("Procesverbalet",QStyle.SP_FileIcon)
   ):
-   button=QPushButton(name);button.setObjectName("navButton");button.setCheckable(True)
-   button.setIcon(self.style().standardIcon(icon));button.setIconSize(QSize(22,22))
+   button=QPushButton({"Hudbe & Derse":"Hudbe / Derse","Vërtetimi i pagesave vjetore":"Anlage 14"}.get(name,name));button.setToolTip(name);button.setObjectName("navButton");button.setCheckable(True)
+   button.setIcon(symbol_icon(name) if name in NAV_SYMBOLS else self.style().standardIcon(icon));button.setIconSize(QSize(29,29))
+   button.setFixedHeight(53)
    button.clicked.connect(lambda checked=False,n=name:self.navigate(n))
    nav.addWidget(button);self.nav_buttons[name]=button
   nav.addStretch()
@@ -151,9 +220,9 @@ class Main(QMainWindow):
   workspace=QFrame();workspace.setObjectName("workspace");work=QVBoxLayout(workspace);work.setContentsMargins(10,8,10,8);work.setSpacing(6)
   body.addWidget(workspace,1)
   bar=QHBoxLayout();work.addLayout(bar)
-  self.mode=QComboBox();self.mode.addItems(["Anëtarësia","Hyrjet","Daljet"]);bar.addWidget(self.mode)
+  self.mode=QComboBox();self.mode.setObjectName("toolbarSelect");self.mode.setMinimumWidth(126);self.mode.addItems(["Anëtarësia","Hyrjet","Daljet"]);bar.addWidget(self.mode)
   self.search=QLineEdit();self.search.setPlaceholderText("Kërko emër, mbiemër, përshkrim...");bar.addWidget(self.search,2)
-  self.year=QComboBox();self.year.addItems([str(x) for x in range(2015,2051)]);self.year.setCurrentText("2026");bar.addWidget(self.year)
+  self.year=QComboBox();self.year.setObjectName("toolbarSelect");self.year.setMinimumWidth(90);self.year.addItems([str(x) for x in range(2015,2051)]);self.year.setCurrentText("2026");bar.addWidget(self.year)
   for label,func,tone in [("Importo CSV",self.import_csv,"green"),("Eksporto PDF",self.pdf,"red"),("Backup",self.backup,"blue")]:
    b=QPushButton(label);b.setProperty("tone",tone);b.clicked.connect(func);bar.addWidget(b)
   self.dashboard=QLabel("SISTEMI I INTEGRUAR I ADMINISTRIMIT\\nAnëtarësia  •  Financat  •  Dokumentet  •  Arkiva")
@@ -161,51 +230,59 @@ class Main(QMainWindow):
   work.addWidget(self.dashboard)
   actions=QHBoxLayout();work.addLayout(actions)
   for label,callback,tone in (
-   ("Shto regjistrim",self.add_record,"green"),("Ndrysho",self.edit_record,"blue"),
-   ("Bart anëtarët",self.rollover_members,"blue"),("Dëftesë PDF",self.receipt_pdf,"purple"),
+   ("Shto hyrje",self.add_record,"green"),
+   ("Bart anëtarët në vitin pasues",self.rollover_members,"blue"),("Regjistro hyrje",self.add_record,"purple"),
    ("Raport financiar A4",self.financial_pdf,"gold")
   ):
    btn=QPushButton(label);btn.setProperty("tone",tone);btn.clicked.connect(callback);actions.addWidget(btn)
+   if tone=="green":self.add_button=btn
+   if tone=="purple":self.register_button=btn
   filter_panel=QFrame();filter_panel.setObjectName("filters");work.addWidget(filter_panel)
   filters=QHBoxLayout(filter_panel);filters.setContentsMargins(8,4,8,4)
-  filter_label=QLabel("Filtrimi");filter_label.setObjectName("filterLabel");filters.addWidget(filter_label)
+  self.filter_label=QLabel("Filtrimi");self.filter_label.setObjectName("filterLabel");filters.addWidget(self.filter_label)
   self.month_filter=QComboBox();self.month_filter.addItems(["Të gjithë muajt","Janar","Shkurt","Mars","Prill","Maj","Qershor","Korrik","Gusht","Shtator","Tetor","Nëntor","Dhjetor"])
   self.date_from=QDateEdit();self.date_to=QDateEdit()
   for label,field in (("Nga data",self.date_from),("Deri më",self.date_to)):
-   field.setCalendarPopup(True);field.setDisplayFormat("dd.MM.yyyy")
+   field.setCalendarPopup(True);field.setDisplayFormat("dd.MM.yyyy");field.setMinimumWidth(113)
    filters.addWidget(QLabel(label));filters.addWidget(field)
   filters.addWidget(QLabel("Muaji"));filters.addWidget(self.month_filter,1)
-  self.clear_filter=QPushButton("Pastro filtrat");self.clear_filter.clicked.connect(self.reset_filters);filters.addWidget(self.clear_filter)
+  self.month_filter.setMaximumWidth(235)
+  self.clear_filter=QPushButton("⟳  Pastro filtrat");self.clear_filter.setObjectName("clearFilters");self.clear_filter.clicked.connect(self.reset_filters);filters.addWidget(self.clear_filter)
   self.reset_date_range()
-  self.summary_label=QLabel("Raport nga të dhënat e importuara — pa rakordim bankar");self.summary_label.setObjectName("summary");work.addWidget(self.summary_label)
+  self.summary_label=QLabel();self.statusBar().addPermanentWidget(self.summary_label)
   self.stats=QHBoxLayout();work.addLayout(self.stats)
   self.stat_cards=[]
   for label,color in (("Cash","#b5ead5"),("Bank","#a8d8ff"),("Të paklasifikuara","#e0cbff"),("Totali","#ffda82")):
    card=QLabel(label+"\\n—");card.setAlignment(Qt.AlignCenter);card.setObjectName("statCard")
    card.setStyleSheet(f"QLabel#statCard{{background:{color};color:#10284d;border:1px solid #92aec9;border-radius:10px;padding:6px;font-weight:800;font-size:16px;min-height:45px}}")
    self.stats.addWidget(card);self.stat_cards.append(card)
-  self.table=QTableWidget();self.table.setAlternatingRowColors(True);self.table.setMinimumHeight(190);self.table.verticalHeader().setDefaultSectionSize(34);self.table.setEditTriggers(QAbstractItemView.NoEditTriggers);self.table.setSelectionBehavior(QAbstractItemView.SelectRows);self.table.doubleClicked.connect(self.edit_record);self.table.setWordWrap(False);work.addWidget(self.table,3);self.mode.currentIndexChanged.connect(self.load);self.year.currentIndexChanged.connect(self.year_changed)
+  self.table=QTableWidget();self.table.setAlternatingRowColors(True);self.table.setMinimumHeight(95);self.table.verticalHeader().setDefaultSectionSize(31);self.table.setEditTriggers(QAbstractItemView.NoEditTriggers);self.table.setSelectionBehavior(QAbstractItemView.SelectRows);self.table.doubleClicked.connect(self.edit_record);self.table.setWordWrap(False);work.addWidget(self.table,3);self.mode.currentIndexChanged.connect(self.load);self.year.currentIndexChanged.connect(self.year_changed)
+  self.table.setContextMenuPolicy(Qt.CustomContextMenu)
+  self.table.customContextMenuRequested.connect(self.record_menu)
   self.setStyleSheet("""
 QMainWindow{background:#073456} QWidget{color:#102d50;font-family:'Segoe UI';font-size:13px}
-QFrame#brand,QFrame#banner,QLabel#heroTitle,QLabel#tagline{background:#083c68;color:#f6d47e}
-QFrame#brand QLabel{background:transparent;color:#f6d47e;font-weight:800;font-size:15px}
-QFrame#workspace{background:#f1f7ff;border:2px solid #8abce3;border-radius:17px}
+QLabel#heroTitle,QLabel#tagline,QLabel#association{background:transparent}
+QLabel#association{color:#f9d77b;font-weight:800;font-size:19px}
+QFrame#workspace{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #a7d2f2,stop:.44 #d8ecff,stop:1 #f1f8ff);border:2px solid #8abce3;border-radius:19px}
 QFrame#filters{background:#dceeff;border:1px solid #accdea;border-radius:8px}
 QLabel#filterLabel{font-weight:800}
-QLabel#heroTitle{font-size:33px;font-weight:900;padding:3px;color:#f9d77b}
-QLabel#tagline{font-size:12px;color:white;padding:7px;letter-spacing:1px}
+QLabel#heroTitle{font-size:39px;font-weight:900;padding:3px;color:#f9d77b}
+QLabel#tagline{font-size:16px;color:white;padding:7px;letter-spacing:1px}
 QPushButton[tone="green"]{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #22bb58,stop:1 #087337)}
 QPushButton[tone="red"]{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #f34b58,stop:1 #a80c2a)}
 QPushButton[tone="purple"]{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #9258d1,stop:1 #502388)}
 QPushButton[tone="gold"]{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #ffab23,stop:1 #b96400)}
 QPushButton[tone="blue"]{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #1b81c8,stop:1 #053b68)}
-QFrame#sidebar{background:#062f58;border-right:3px solid #d4ae55}
+QFrame#sidebar{background:#062f58}
 QFrame#sidebar QLabel{background:transparent;color:#f3d17c}
-QPushButton{background:#0864a2;border:1px solid #75b4e1;border-radius:10px;padding:11px;color:white;font-weight:700;font-size:13px;min-height:20px}
+QPushButton{background:#0864a2;border:1px solid #75b4e1;border-radius:10px;padding:9px;color:white;font-weight:700;font-size:13px;min-height:20px}
 QPushButton:hover{background:#1883cc;border-color:#f0bf55}
-QPushButton#navButton{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #0d75b6,stop:1 #042a4e);text-align:left;padding-left:19px;font-size:15px;min-height:24px;padding-top:8px;padding-bottom:8px;border:1px solid #4da4d9}
+QPushButton#navButton{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #0d75b6,stop:1 #042a4e);text-align:left;padding-left:17px;font-size:17px;min-height:24px;padding-top:8px;padding-bottom:8px;border:1px solid #4da4d9}
 QPushButton#navButton:hover,QPushButton#navButton:checked{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #ffe36e,stop:1 #ce860a);color:#082e50}\nQLabel#summary{background:#d9eafa;color:#07385e;padding:10px;border:1px solid #8cbbe1;border-radius:10px;font-size:14px;font-weight:800}
 QComboBox,QLineEdit,QDateEdit{background:#fff;border:2px solid #a3c6e4;border-radius:9px;padding:9px;color:#10365b;min-height:22px}
+QComboBox#toolbarSelect{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #187fbd,stop:1 #063661);color:white;font-weight:800;font-size:15px}
+QComboBox QAbstractItemView{background:white;color:#102d50;selection-background-color:#b8dff9}
+QPushButton#clearFilters{color:#123c83;background:#d6ebff;border-color:#658bbc}
 QTableWidget{font-size:14px;background:#fff;alternate-background-color:#dceafb;gridline-color:#bfd5ec;selection-background-color:#86c5f3;selection-color:#06284b;border:2px solid #a7c8e5;border-radius:12px}
 QTableWidget::item{padding:7px}
 QHeaderView::section{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #1779b4,stop:1 #063356);color:white;padding:8px;border:1px solid #3375a5;font-weight:bold;font-size:14px}
@@ -213,46 +290,17 @@ QScrollBar:vertical{background:#d8e8f8;width:14px}
 QScrollBar::handle:vertical{background:#6d9ec4;border-radius:6px;min-height:24px}
 QDialog{background:#eaf2fc;color:#102d50}
 QStatusBar{background:#082d55;color:white;font-weight:bold}
-QStatusBar QLabel{color:white}
+QStatusBar QLabel{color:white;background:transparent;padding:4px}
+QStatusBar::item{border:0}
 """)
   self.search.textChanged.connect(self.apply_search)
   self.month_filter.currentIndexChanged.connect(self.apply_search)
   self.date_from.dateChanged.connect(self.apply_search)
   self.date_to.dateChanged.connect(self.apply_search)
-  self.statusBar().addPermanentWidget(QLabel("  ●  Sistemi lokal  "))
+  self.statusBar().setFixedHeight(36)
   self.mode.setCurrentText("Hyrjet")
   self.load()
   self.navigate("Hyrjet")
-  QTimer.singleShot(0,self._render_hero)
- def resizeEvent(self,event):
-  super().resizeEvent(event)
-  QTimer.singleShot(0,self._render_hero)
- def _render_hero(self):
-  if not hasattr(self,"hero"):return
-  photo=QPixmap(str(ROOT/"mosque_interior.jpg"))
-  if photo.isNull():photo=QPixmap(str(ASSETS/"mosque_interior.jpg"))
-  if photo.isNull():
-   self.hero.setStyleSheet("background:qlineargradient(x1:0,y1:0,x2:1,y2:0,stop:0 #052744,stop:.5 #075082,stop:1 #10345d)")
-   return
-  width=max(1,self.hero.width())
-  height=max(145,self.hero.height())
-  canvas=photo.scaled(width,height,Qt.KeepAspectRatioByExpanding,Qt.SmoothTransformation)
-  header=canvas.copy((canvas.width()-width)//2,(canvas.height()-height)//2,width,height)
-  painter=QPainter(header);painter.setRenderHint(QPainter.Antialiasing)
-  curve=QPainterPath()
-  curve.moveTo(0,height-13)
-  curve.cubicTo(width*.32,height+18,width*.75,height+12,width,height-42)
-  curve.lineTo(width,height);curve.lineTo(0,height);curve.closeSubpath()
-  painter.fillPath(curve,QColor("#083c68"))
-  ribbon=QPainterPath()
-  ribbon.moveTo(0,height-13)
-  ribbon.cubicTo(width*.32,height+18,width*.75,height+12,width,height-42)
-  ribbon.cubicTo(width*.77,height+22,width*.33,height+24,0,height-5)
-  ribbon.closeSubpath()
-  gold=QLinearGradient(0,0,width,0)
-  gold.setColorAt(0,QColor("#cc942e"));gold.setColorAt(.48,QColor("#ffe791"));gold.setColorAt(1,QColor("#c48929"))
-  painter.fillPath(ribbon,gold);painter.end()
-  self.hero.setPixmap(header)
  def reset_date_range(self):
   year=int(self.year.currentText())
   for widget,date in ((self.date_from,QDate(year,1,1)),(self.date_to,QDate(year,12,31))):
@@ -263,6 +311,14 @@ QStatusBar QLabel{color:white}
   mode=self.mode.currentText()
   if mode=="Anëtarësia":self.add_member()
   else:self.add_transaction(mode)
+ def record_menu(self,point):
+  index=self.table.indexAt(point)
+  if index.isValid():
+   self.table.selectRow(index.row())
+  menu=QMenu(self)
+  menu.addAction("Ndrysho",self.edit_record)
+  menu.addAction("Dëftesë PDF",self.receipt_pdf)
+  menu.exec(self.table.viewport().mapToGlobal(point))
  def edit_record(self):
   row=self.table.currentRow()
   if row<0:return
@@ -369,13 +425,18 @@ QStatusBar QLabel{color:white}
    source=f" · Importuar {stamp[0].replace('T',' ')}" if stamp else " · Kopje e paketuar"
   self.statusBar().showMessage(f"{visible_count} nga {self.table.rowCount()} regjistrime · {mode} · {year}{source}")
   financial=mode!="Anëtarësia"
+  noun={"Hyrjet":"hyrje","Daljet":"dalje","Anëtarësia":"anëtar"}[mode]
+  self.add_button.setText(f"Shto {noun}")
+  self.register_button.setText(f"Regjistro {noun}")
+  self.filter_label.setText("Filtrimi i "+mode.lower())
+  self.search.setPlaceholderText("Kërko përshkrim, kategori..." if financial else "Kërko emër, mbiemër...")
   for field in (self.date_from,self.date_to):field.setEnabled(financial)
   for card in self.stat_cards:card.setVisible(financial)
   if financial:
    visible_rows=[record for index,record in enumerate(self.ledger_rows) if not self.table.isRowHidden(index)]
    values=totals(visible_rows)
    numbers=[values[key] for key in ("cash","bank","other")]
-   for label,card,value in zip(("CASH","BANK","TË PAKLASIFIKUARA","TOTALI"),self.stat_cards,numbers+[sum(numbers)]):
+   for label,card,value in zip((f"{noun.title()} Cash",f"{noun.title()} Bank","Të paklasifikuara",f"Totali · {mode}"),self.stat_cards,numbers+[sum(numbers)]):
     card.setText(f"{label}\n{value/100:,.2f} €")
    self.summary_label.setText(f"Lëvizje të përfshira: {values['count']} · Për rakordim / përjashtuar: {values['excluded']}")
   else:self.summary_label.setText(f"Anëtarësia {year} · {visible_count} regjistrime")
@@ -420,19 +481,6 @@ QStatusBar QLabel{color:white}
   dialog=QDialog(self);dialog.setWindowTitle("Cilësimet dhe burimet zyrtare")
   layout=QVBoxLayout(dialog)
   layout.addWidget(QLabel(f"Databaza lokale\\n{database_path}"))
-  photo_button=QPushButton("Vendos fotografinë e xhamisë në ballinë")
-  def set_mosque_photo():
-   path,_=QFileDialog.getOpenFileName(dialog,"Zgjidh fotografinë e xhamisë","","Fotografi (*.jpg *.jpeg *.png)")
-   if not path:return
-   picture=QPixmap(path)
-   if picture.isNull():
-    QMessageBox.warning(dialog,"Fotografia","Skedari nuk është fotografi e vlefshme.");return
-   if not picture.save(str(ROOT/"mosque_interior.jpg"),"JPG",92):
-    QMessageBox.warning(dialog,"Fotografia","Nuk u ruajt fotografia.");return
-   self._render_hero()
-   QMessageBox.information(dialog,"Ballina","Fotografia u vendos në ballinë dhe ruhet edhe pas rinisjes.")
-  photo_button.clicked.connect(set_mosque_photo)
-  layout.addWidget(photo_button)
   for label,gid in TABS.items():
    button=QPushButton("Hap në Google Sheets · "+label)
    button.clicked.connect(lambda checked=False,tab=gid:QDesktopServices.openUrl(QUrl(f"{SHEET}/edit#gid={tab}")))
@@ -571,6 +619,7 @@ QStatusBar QLabel{color:white}
    self.ledger_rows=records(db,y,mode)
    ids=[row[6] for row in self.ledger_rows]
    rows=[(*record[:4],f"{record[4]/100:,.2f} €",exclusion(record) or "Përfshirë") for record in self.ledger_rows]
+  self.table.verticalHeader().setVisible(mode!="Anëtarësia")
   self.table.setColumnCount(len(heads));self.table.setHorizontalHeaderLabels(heads);self.table.setRowCount(len(rows))
   for i,row in enumerate(rows):
    for j,val in enumerate(row):
@@ -583,6 +632,7 @@ QStatusBar QLabel{color:white}
   header=self.table.horizontalHeader()
   header.setMinimumSectionSize(38)
   header.setStretchLastSection(False)
+  self.table.verticalHeader().setFixedWidth(43)
   if mode=="Anëtarësia":
    # Fit all twelve months on screen; identity columns get more space.
    header.setSectionResizeMode(QHeaderView.Stretch)
@@ -595,6 +645,7 @@ QStatusBar QLabel{color:white}
    header.setSectionResizeMode(QHeaderView.Stretch)
    header.setSectionResizeMode(1,QHeaderView.Interactive)
    self.table.setColumnWidth(1,280)
+   header.setSectionResizeMode(5,QHeaderView.ResizeToContents)
   self.apply_search()
  def show_balance(self):
   y=int(self.year.currentText())
@@ -751,9 +802,22 @@ if __name__=="__main__":
   login.hide()
   win=Main();win.show();app.processEvents()
   assert not mosque_logo().isNull() and not login.windowIcon().isNull()
-  assert not QPixmap(str(ASSETS/"mosque_interior.jpg")).isNull()
-  assert win.hero.pixmap() and not win.hero.pixmap().isNull()
-  assert win.table.rowCount()>0 and len(win.nav_buttons)==13
+  assert not win.hero.photo.isNull() and not win.hero.emblem.pixmap().isNull()
+  assert win.table.rowCount()>0 and len(win.nav_buttons)==15
+  win.search.setText("no-match-6ddba")
+  assert all(win.table.isRowHidden(row) for row in range(win.table.rowCount()))
+  win.reset_filters()
+  assert not win.table.isRowHidden(0)
+  win.month_filter.setCurrentIndex(1)
+  assert any(win.table.isRowHidden(row) for row in range(win.table.rowCount()))
+  win.reset_filters()
+  win.resize(1080,690);app.processEvents()
+  assert win.table.isVisible() and win.table.height()>=95
+  win.resize(1536,830);app.processEvents()
+  screenshot=os.getenv("XHAMIA_SMOKE_SCREENSHOT")
+  if screenshot:
+   assert win.grab().save(screenshot)
+
   win.navigate("Daljet")
   assert win.table.rowCount()>0 and win.stat_cards[3].isVisible()
   win.navigate("Anëtarësia")

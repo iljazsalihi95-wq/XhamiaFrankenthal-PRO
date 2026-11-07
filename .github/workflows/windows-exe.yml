@@ -53,16 +53,23 @@ jobs:
           $exe = Join-Path $installDir "XhamiaFrankenthalPRO.exe"
           if (!(Test-Path $exe) -or !(Test-Path (Join-Path $installDir "mosque.ico"))) { throw "Installed files are missing" }
           $env:APPDATA = Join-Path $env:RUNNER_TEMP "xhamia-installed-smoke"
+          $env:XHAMIA_SMOKE_SCREENSHOT = Join-Path $PWD "XhamiaFrankenthalPRO-Windows.png"
           $app = Start-Process -FilePath $exe -ArgumentList "--smoke-test" -PassThru
           if (!$app.WaitForExit(120000)) {
             $app.Kill()
             throw "Installed application did not finish its smoke test"
           }
           if ($app.ExitCode -ne 0) { throw "Installed application failed: $($app.ExitCode)" }
+          if (!(Test-Path $env:XHAMIA_SMOKE_SCREENSHOT)) { throw "Windows screenshot is missing" }
       - uses: actions/upload-artifact@v4
         with:
           name: XhamiaFrankenthalPRO-Installer
           path: |
             installer/XhamiaFrankenthalPRO-Setup.exe
             dist/XhamiaFrankenthalPRO.exe
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: XhamiaFrankenthalPRO-Windows-Screenshot
+          path: XhamiaFrankenthalPRO-Windows.png
           if-no-files-found: error
