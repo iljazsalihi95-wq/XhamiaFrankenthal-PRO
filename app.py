@@ -213,7 +213,7 @@ class HtmlDocument(QDialog):
   layout=QVBoxLayout(self)
   export_button=QPushButton("Ruaj formularin si PDF (Windows)")
   export_button.setToolTip("Eksporton formularin përmes motorit PDF të Windows, edhe kur biblioteka HTML nuk ngarkohet.")
-  export_button.clicked.connect(self.save_pdf)
+  export_button.clicked.connect(lambda checked=False:self.save_pdf())
   layout.addWidget(export_button)
   if archive:
    button=QPushButton("Hap arkivën lokale")
@@ -224,7 +224,7 @@ class HtmlDocument(QDialog):
   self.view.settings().setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls,True)
   self.view.page().newWindowRequested.connect(self.open_external)
   parent.document_profile.downloadRequested.connect(self.save_download)
-  self.view.printRequested.connect(self.save_pdf)
+  self.view.printRequested.connect(lambda:self.save_pdf())
   self.view.printRequestedByFrame.connect(self.save_pdf)
   self.view.pdfPrintingFinished.connect(self.pdf_finished)
   layout.addWidget(self.view)
@@ -251,6 +251,7 @@ class HtmlDocument(QDialog):
  def save_pdf(self,frame=None):
   target,_=QFileDialog.getSaveFileName(self,"Ruaj PDF",self.windowTitle()+".pdf","PDF (*.pdf)")
   if target:
+   if isinstance(frame,bool):frame=None
    (frame if frame is not None else self.view).printToPdf(target)
 
  def pdf_finished(self,path,success):
