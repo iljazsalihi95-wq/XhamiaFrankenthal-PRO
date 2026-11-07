@@ -200,7 +200,7 @@ class MosqueHeader(QWidget):
 
 class DocumentPage(QWebEnginePage):
  def acceptNavigationRequest(self,url,kind,main_frame):
-  if kind==QWebEnginePage.NavigationType.NavigationTypeLinkClicked and not url.isLocalFile():
+  if kind==QWebEnginePage.NavigationType.NavigationTypeLinkClicked and url.scheme() in ("http","https","mailto"):
    QDesktopServices.openUrl(url)
    return False
   return super().acceptNavigationRequest(url,kind,main_frame)
@@ -218,7 +218,8 @@ class HtmlDocument(QDialog):
   self.view=QWebEngineView(self)
   self.view.setPage(DocumentPage(parent.document_profile,self.view))
   self.view.settings().setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls,True)
-  self.view.page().newWindowRequested.connect(lambda request:QDesktopServices.openUrl(request.requestedUrl()))
+  self.view.page().newWindowRequested.connect(self.open_external)
+  parent.document_profile.downloadRequested.connect(self.save_download)
   self.view.printRequested.connect(self.save_pdf)
   self.view.printRequestedByFrame.connect(self.save_pdf)
   self.view.pdfPrintingFinished.connect(self.pdf_finished)
@@ -226,6 +227,22 @@ class HtmlDocument(QDialog):
   url=QUrl.fromLocalFile(str(path))
   url.setFragment(section)
   self.view.load(url)
+
+ def open_external(self,request):
+  url=request.requestedUrl()
+  if url.scheme() in ("http","https","mailto"):
+   QDesktopServices.openUrl(url)
+
+ def save_download(self,request):
+  if request.page()!=self.view.page():
+   return
+  suggested=Path(request.downloadDirectory())/request.downloadFileName()
+  target,_=QFileDialog.getSaveFileName(self,"Ruaj dokumentin",str(suggested))
+  if target:
+   path=Path(target)
+   request.setDownloadDirectory(str(path.parent))
+   request.setDownloadFileName(path.name)
+   request.accept()
 
  def save_pdf(self,frame=None):
   target,_=QFileDialog.getSaveFileName(self,"Ruaj PDF",self.windowTitle()+".pdf","PDF (*.pdf)")
@@ -893,7 +910,7 @@ if __name__=="__main__":
   books.year.setCurrentText("2026")
   assert books.book.rowCount()>0 and books.docs.rowCount()==0
   from unittest.mock import patch
-  for section,selector in (("docs","[onclick='openNikah()']"),("hudbe",".nav button.active"),("","#tax")):
+  for section,selector in (("docs","[onclick='openNikah()']"),("hudbe",".nav button.active[onclick^=\"show('hudbe'\"]"),("","#tax")):
    observed=[]
    def inspect_document(dialog):
     def loaded(ok):
@@ -901,6 +918,7 @@ if __name__=="__main__":
       dialog.reject()
       return
      expression=f"Boolean(document.querySelector({selector!r}))"
+     if not section:expression+=" && typeof render === 'function' && document.getElementById('tax').value === '27/659/06083'"
      dialog.view.page().runJavaScript(expression, lambda result:(observed.append(result),dialog.accept()))
     dialog.view.loadFinished.connect(loaded)
     QTimer.singleShot(15000,dialog,dialog.reject)
