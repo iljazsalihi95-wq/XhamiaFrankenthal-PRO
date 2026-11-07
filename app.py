@@ -154,19 +154,22 @@ class MosqueHeader(QWidget):
   width=self.width()-250
   self.emblem.setGeometry(0,0,250,187)
   self.association.setGeometry(0,188,250,52)
-  self.title.setGeometry(250,201,width,53)
-  self.title.setStyleSheet(f"font-size:{min(39, width//21)}px")
+  self.title.setGeometry(250,198,width,51)
+  self.title.setStyleSheet(f"font-size:{min(39, width//25)}px")
   self.subtitle.setStyleSheet(f"font-size:{min(16, width//69)}px")
   self.subtitle.setGeometry(250,250,width,33)
 
  def paintEvent(self,event):
   painter=QPainter(self);painter.setRenderHint(QPainter.Antialiasing)
   painter.setRenderHint(QPainter.SmoothPixmapTransform)
-  painter.scale(self.width()/1536,1)
+  width=self.width()
   blue=QLinearGradient(0,0,0,287)
   blue.setColorAt(0,QColor("#031f40"));blue.setColorAt(1,QColor("#075084"))
-  painter.fillRect(QRectF(0,0,1536,287),blue)
+  painter.fillRect(QRectF(0,0,width,287),blue)
   painter.save()
+  painter.translate(250,0)
+  painter.scale((width-250)/1285,1)
+  painter.translate(-251,0)
   edge=QPainterPath()
   edge.moveTo(251,0);edge.lineTo(1536,0);edge.lineTo(1536,121)
   edge.cubicTo(1450,217,1320,252,1180,253)
@@ -181,10 +184,16 @@ class MosqueHeader(QWidget):
   ribbon=QPainterPath()
   ribbon.moveTo(0,205);ribbon.cubicTo(158,330,337,149,528,254)
   ribbon.cubicTo(346,177,161,342,0,205)
+  left_ribbon=QPainterPath(ribbon)
+  ribbon=QPainterPath()
   ribbon.moveTo(1180,253);ribbon.cubicTo(1330,248,1460,203,1536,121)
   ribbon.lineTo(1536,151);ribbon.cubicTo(1450,228,1330,258,1180,253)
   gold=QLinearGradient(0,198,0,270)
   gold.setColorAt(0,QColor("#ffeb9c"));gold.setColorAt(.65,QColor("#f9d878"));gold.setColorAt(1,QColor("#b98424"))
+  painter.fillPath(left_ribbon,gold)
+  painter.translate(250,0)
+  painter.scale((width-250)/1285,1)
+  painter.translate(-251,0)
   painter.fillPath(ribbon,gold)
 
 class Main(QMainWindow):
@@ -645,7 +654,10 @@ QStatusBar::item{border:0}
    header.setSectionResizeMode(QHeaderView.Stretch)
    header.setSectionResizeMode(1,QHeaderView.Interactive)
    self.table.setColumnWidth(1,280)
-   header.setSectionResizeMode(5,QHeaderView.ResizeToContents)
+   for column,size in ((0,105),(2,88),(4,105),(5,125)):
+    header.setSectionResizeMode(column,QHeaderView.Interactive)
+    self.table.setColumnWidth(column,size)
+   header.setSectionResizeMode(1,QHeaderView.Stretch)
   self.apply_search()
  def show_balance(self):
   y=int(self.year.currentText())
@@ -813,9 +825,10 @@ if __name__=="__main__":
   win.reset_filters()
   win.resize(1080,690);app.processEvents()
   assert win.table.isVisible() and win.table.height()>=95
-  win.resize(1536,830);app.processEvents()
   screenshot=os.getenv("XHAMIA_SMOKE_SCREENSHOT")
   if screenshot:
+   win.setFixedSize(1536,830);app.processEvents()
+   assert win.size()==QSize(1536,830)
    assert win.grab().save(screenshot)
 
   win.navigate("Daljet")
