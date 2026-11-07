@@ -5,6 +5,8 @@ from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtCore import QByteArray, Qt, QUrl, QSize, QDate, QTimer, QRectF
 from PySide6.QtGui import QPixmap, QIcon, QColor, QBrush, QDesktopServices, QPainter, QPainterPath, QLinearGradient
 from PySide6.QtWidgets import QHeaderView
+from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile, QWebEngineSettings
+from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkReply
 from seed_data import seed
 from finance_reports import report
@@ -195,6 +197,44 @@ class MosqueHeader(QWidget):
   painter.scale((width-250)/1285,1)
   painter.translate(-251,0)
   painter.fillPath(ribbon,gold)
+
+class DocumentPage(QWebEnginePage):
+ def acceptNavigationRequest(self,url,kind,main_frame):
+  if kind==QWebEnginePage.NavigationType.NavigationTypeLinkClicked and not url.isLocalFile():
+   QDesktopServices.openUrl(url)
+   return False
+  return super().acceptNavigationRequest(url,kind,main_frame)
+
+class HtmlDocument(QDialog):
+ def __init__(self,parent,title,path,section="",archive=None):
+  super().__init__(parent)
+  self.setWindowTitle(title)
+  self.resize(1170,810)
+  layout=QVBoxLayout(self)
+  if archive:
+   button=QPushButton("Hap arkivën lokale")
+   button.clicked.connect(archive)
+   layout.addWidget(button)
+  self.view=QWebEngineView(self)
+  self.view.setPage(DocumentPage(parent.document_profile,self.view))
+  self.view.settings().setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls,True)
+  self.view.page().newWindowRequested.connect(lambda request:QDesktopServices.openUrl(request.requestedUrl()))
+  self.view.printRequested.connect(self.save_pdf)
+  self.view.printRequestedByFrame.connect(self.save_pdf)
+  self.view.pdfPrintingFinished.connect(self.pdf_finished)
+  layout.addWidget(self.view)
+  url=QUrl.fromLocalFile(str(path))
+  url.setFragment(section)
+  self.view.load(url)
+
+ def save_pdf(self,frame=None):
+  target,_=QFileDialog.getSaveFileName(self,"Ruaj PDF",self.windowTitle()+".pdf","PDF (*.pdf)")
+  if target:
+   (frame if frame is not None else self.view).printToPdf(target)
+
+ def pdf_finished(self,path,success):
+  if not success:
+   QMessageBox.warning(self,"PDF","Dokumenti nuk u ruajt si PDF.")
 
 class Main(QMainWindow):
  def __init__(self):
@@ -464,27 +504,31 @@ QStatusBar::item{border:0}
    self.open_annual_payment_confirmation()
   elif name=="Sistemi i Hoxhës":
    self.open_imam_office()
+  elif name in ("Hudbe & Derse","Rregullorja"):
+   section="hudbe" if name=="Hudbe & Derse" else "reg"
+   self.open_imam_office(section,lambda:self.open_documents(name))
   elif name=="Cilësimet":
    self.open_settings()
   elif name!="Ballina":
    self.open_documents(name)
- def open_imam_office(self):
-  """Open the complete supplied Imam Office HTML without altering its modules."""
-  bundle_root=Path(getattr(sys,"_MEIPASS",Path(__file__).resolve().parent))
-  template=bundle_root/"templates"/"sistemi_i_hoxhes.html"
-  if not template.is_file():
-   QMessageBox.warning(self,"Sistemi i Hoxhës","HTML i sistemit mungon në paketën e programit.")
-   return
-  QDesktopServices.openUrl(QUrl.fromLocalFile(str(template)))
+ def open_imam_office(self,section="",archive=None):
+  self.open_html_document("Sistemi i Hoxhës","sistemi_i_hoxhes.html",section,archive)
 
  def open_annual_payment_confirmation(self):
-  """Open the supplied Anlage 14 template; do not generate unverified payments."""
-  bundle_root=Path(getattr(sys,"_MEIPASS",Path(__file__).resolve().parent))
-  template=bundle_root/"templates"/"anlage14_jahreszahlungen.html"
+  self.open_html_document("Anlage 14","anlage14_jahreszahlungen.html")
+
+ def open_html_document(self,title,filename,section="",archive=None):
+  template=ASSETS.parent/"templates"/filename
   if not template.is_file():
-   QMessageBox.warning(self,"Anlage 14","HTML-Vorlage fehlt im Programmpaket.")
+   QMessageBox.warning(self,title,"HTML-ja mungon në paketën e programit.")
    return
-  QDesktopServices.openUrl(QUrl.fromLocalFile(str(template)))
+  if not hasattr(self,"document_profile"):
+   self.document_profile=QWebEngineProfile("XhamiaDocuments",QApplication.instance())
+   self.document_profile.setPersistentStoragePath(str(ROOT/"web-documents"))
+   self.document_profile.setCachePath(str(ROOT/"web-cache"))
+  dialog=HtmlDocument(self,title,template,section,archive)
+  dialog.exec()
+  dialog.deleteLater()
 
  def open_settings(self):
   dialog=QDialog(self);dialog.setWindowTitle("Cilësimet dhe burimet zyrtare")
@@ -848,6 +892,24 @@ if __name__=="__main__":
   assert books.book.rowCount()>0
   books.year.setCurrentText("2026")
   assert books.book.rowCount()>0 and books.docs.rowCount()==0
+  from unittest.mock import patch
+  for section,selector in (("docs","[onclick='openNikah()']"),("hudbe",".nav button.active"),("","#tax")):
+   observed=[]
+   def inspect_document(dialog):
+    def loaded(ok):
+     if not ok:
+      dialog.reject()
+      return
+     expression=f"Boolean(document.querySelector({selector!r}))"
+     dialog.view.page().runJavaScript(expression, lambda result:(observed.append(result),dialog.accept()))
+    dialog.view.loadFinished.connect(loaded)
+    QTimer.singleShot(15000,dialog,dialog.reject)
+    return QDialog.exec(dialog)
+   with patch.object(HtmlDocument,"exec",inspect_document):
+    if section:win.open_imam_office(section)
+    else:win.open_annual_payment_confirmation()
+   assert observed==[True], (section,observed)
+   app.processEvents()
   sys.exit(0)
  if login.exec()==QDialog.Accepted:
   win=Main();win.show();sys.exit(app.exec())
