@@ -307,7 +307,12 @@ class Buchhaltung(QDialog):
                     writer.writerow((num, category, entry, day, index.get(key, "Zuordnung prüfen") if key else "Jahresbeleg"))
                 archive.writestr("Buchungsjournal.csv", journal.getvalue().encode("utf-8-sig"))
                 archive.writestr("Belegverzeichnis.csv", documents.getvalue().encode("utf-8-sig"))
-                archive.writestr("Jahresuebersicht.txt", self.totals.text())
+                annual_totals = summary(self.db, year)
+                annual_overview = " · ".join(
+                    f"{title}: {money(sum(annual_totals[kind][method] for method in ('cash', 'bank', 'other')))} €"
+                    for kind, title in (("Hyrjet", "Einnahmen"), ("Daljet", "Ausgaben"))
+                ) + " · Jahreswerte laut Finanzregister"
+                archive.writestr("Jahresuebersicht.txt", annual_overview.encode("utf-8"))
             QMessageBox.information(self, "Jahresmappe", "Jahresmappe wurde gespeichert.")
         except OSError as exc:
             QMessageBox.warning(self, "Export", str(exc))
