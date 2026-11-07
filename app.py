@@ -211,6 +211,10 @@ class HtmlDocument(QDialog):
   self.setWindowTitle(title)
   self.resize(1170,810)
   layout=QVBoxLayout(self)
+  export_button=QPushButton("Ruaj formularin si PDF (Windows)")
+  export_button.setToolTip("Eksporton formularin përmes motorit PDF të Windows, edhe kur biblioteka HTML nuk ngarkohet.")
+  export_button.clicked.connect(self.save_pdf)
+  layout.addWidget(export_button)
   if archive:
    button=QPushButton("Hap arkivën lokale")
    button.clicked.connect(archive)
