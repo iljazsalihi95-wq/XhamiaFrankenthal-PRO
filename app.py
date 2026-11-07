@@ -109,9 +109,9 @@ class Main(QMainWindow):
   pic=mosque_logo()
   if not pic.isNull():self.setWindowIcon(QIcon(pic))
   w=QWidget();self.setCentralWidget(w);v=QVBoxLayout(w)
-  v.setContentsMargins(8,8,8,4);v.setSpacing(7)
+  v.setContentsMargins(0,0,0,0);v.setSpacing(0)
   top=QHBoxLayout();top.setSpacing(0);v.addLayout(top)
-  brand_box=QFrame();brand_box.setObjectName("brand");brand_box.setFixedSize(210,222)
+  brand_box=QFrame();brand_box.setObjectName("brand");brand_box.setFixedSize(242,270)
   brand_layout=QVBoxLayout(brand_box);brand_layout.setContentsMargins(6,5,6,7)
   logo=QLabel();logo.setAlignment(Qt.AlignCenter)
   if not pic.isNull():logo.setPixmap(pic.scaled(148,148,Qt.KeepAspectRatio,Qt.SmoothTransformation))
@@ -119,18 +119,18 @@ class Main(QMainWindow):
   brand=QLabel("ISLAMISCHER VEREIN\nFRANKENTHAL e.V.")
   brand.setAlignment(Qt.AlignCenter);brand_layout.addWidget(brand)
   top.addWidget(brand_box)
-  banner=QFrame();banner.setObjectName("banner");banner.setFixedHeight(222)
+  banner=QFrame();banner.setObjectName("banner");banner.setFixedHeight(270)
   banner_layout=QVBoxLayout(banner);banner_layout.setContentsMargins(0,0,0,0);banner_layout.setSpacing(0)
-  self.hero=QLabel();self.hero.setAlignment(Qt.AlignCenter);self.hero.setMinimumSize(1,145);self.hero.setSizePolicy(QSizePolicy.Ignored,QSizePolicy.Expanding)
+  self.hero=QLabel();self.hero.setAlignment(Qt.AlignCenter);self.hero.setMinimumSize(1,180);self.hero.setSizePolicy(QSizePolicy.Ignored,QSizePolicy.Expanding)
   banner_layout.addWidget(self.hero,1)
   heading=QLabel("XHAMIA FRANKENTHAL PRO");heading.setObjectName("heroTitle");heading.setAlignment(Qt.AlignCenter)
   banner_layout.addWidget(heading)
   tagline=QLabel("ADMINISTRIMI I XHAMISË  •  REGJISTRIME DHE LLOGARITJE AUTOMATIKE")
   tagline.setObjectName("tagline");tagline.setAlignment(Qt.AlignCenter);banner_layout.addWidget(tagline)
   top.addWidget(banner,1)
-  body=QHBoxLayout();body.setSpacing(8);v.addLayout(body,1)
+  body=QHBoxLayout();body.setSpacing(7);body.setContentsMargins(0,0,8,5);v.addLayout(body,1)
   sidebar=QFrame();sidebar.setObjectName("sidebar")
-  scroll=QScrollArea();scroll.setWidgetResizable(True);scroll.setFixedWidth(210);scroll.setFrameShape(QFrame.NoFrame)
+  scroll=QScrollArea();scroll.setWidgetResizable(True);scroll.setFixedWidth(242);scroll.setFrameShape(QFrame.NoFrame)
   scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff);scroll.setWidget(sidebar)
   nav=QVBoxLayout(sidebar);nav.setContentsMargins(6,6,6,6);nav.setSpacing(4)
   self.nav_buttons={}
@@ -157,7 +157,7 @@ class Main(QMainWindow):
   for label,func,tone in [("Importo CSV",self.import_csv,"green"),("Eksporto PDF",self.pdf,"red"),("Backup",self.backup,"blue")]:
    b=QPushButton(label);b.setProperty("tone",tone);b.clicked.connect(func);bar.addWidget(b)
   self.dashboard=QLabel("SISTEMI I INTEGRUAR I ADMINISTRIMIT\\nAnëtarësia  •  Financat  •  Dokumentet  •  Arkiva")
-  self.dashboard.setAlignment(Qt.AlignCenter);self.dashboard.setMinimumHeight(92);self.dashboard.setStyleSheet("font-size:22px;font-weight:800;color:#f4d27a;padding:20px;border:2px solid #c99c3b;border-radius:15px;background:#073d68")
+  self.dashboard.setAlignment(Qt.AlignCenter);self.dashboard.setMinimumHeight(72);self.dashboard.setStyleSheet("font-size:22px;font-weight:800;color:#f4d27a;padding:20px;border:2px solid #c99c3b;border-radius:15px;background:#073d68")
   work.addWidget(self.dashboard)
   actions=QHBoxLayout();work.addLayout(actions)
   for label,callback,tone in (
@@ -189,21 +189,21 @@ class Main(QMainWindow):
 QMainWindow{background:#073456} QWidget{color:#102d50;font-family:'Segoe UI';font-size:13px}
 QFrame#brand,QFrame#banner,QLabel#heroTitle,QLabel#tagline{background:#083c68;color:#f6d47e}
 QFrame#brand QLabel{background:transparent;color:#f6d47e;font-weight:800;font-size:15px}
-QFrame#workspace{background:#eef6ff;border:2px solid #98c7e9;border-radius:15px}
+QFrame#workspace{background:#f1f7ff;border:2px solid #8abce3;border-radius:17px}
 QFrame#filters{background:#dceeff;border:1px solid #accdea;border-radius:8px}
 QLabel#filterLabel{font-weight:800}
-QLabel#heroTitle{font-size:29px;font-weight:900;padding-bottom:1px}
-QLabel#tagline{font-size:11px;color:white;padding:4px;letter-spacing:1px}
+QLabel#heroTitle{font-size:33px;font-weight:900;padding:3px;color:#f9d77b}
+QLabel#tagline{font-size:12px;color:white;padding:7px;letter-spacing:1px}
 QPushButton[tone="green"]{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #22bb58,stop:1 #087337)}
 QPushButton[tone="red"]{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #f34b58,stop:1 #a80c2a)}
 QPushButton[tone="purple"]{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #9258d1,stop:1 #502388)}
 QPushButton[tone="gold"]{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #ffab23,stop:1 #b96400)}
 QPushButton[tone="blue"]{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #1b81c8,stop:1 #053b68)}
-QFrame#sidebar{background:#082d55;border:2px solid #d4ae55;border-radius:17px}
+QFrame#sidebar{background:#062f58;border-right:3px solid #d4ae55}
 QFrame#sidebar QLabel{background:transparent;color:#f3d17c}
 QPushButton{background:#0864a2;border:1px solid #75b4e1;border-radius:10px;padding:11px;color:white;font-weight:700;font-size:13px;min-height:20px}
 QPushButton:hover{background:#1883cc;border-color:#f0bf55}
-QPushButton#navButton{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #086aa4,stop:1 #053353);text-align:left;padding-left:19px;font-size:15px;min-height:18px;padding-top:6px;padding-bottom:6px;border:1px solid #4da4d9}
+QPushButton#navButton{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #0d75b6,stop:1 #042a4e);text-align:left;padding-left:19px;font-size:15px;min-height:24px;padding-top:8px;padding-bottom:8px;border:1px solid #4da4d9}
 QPushButton#navButton:hover,QPushButton#navButton:checked{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #ffe36e,stop:1 #ce860a);color:#082e50}\nQLabel#summary{background:#d9eafa;color:#07385e;padding:10px;border:1px solid #8cbbe1;border-radius:10px;font-size:14px;font-weight:800}
 QComboBox,QLineEdit,QDateEdit{background:#fff;border:2px solid #a3c6e4;border-radius:9px;padding:9px;color:#10365b;min-height:22px}
 QTableWidget{font-size:14px;background:#fff;alternate-background-color:#dceafb;gridline-color:#bfd5ec;selection-background-color:#86c5f3;selection-color:#06284b;border:2px solid #a7c8e5;border-radius:12px}
