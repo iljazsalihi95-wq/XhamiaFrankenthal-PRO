@@ -301,8 +301,10 @@ class Main(QMainWindow):
   work.addWidget(self.dashboard)
   actions=QHBoxLayout();work.addLayout(actions)
   for label,callback,tone in (
-   ("Shto hyrje",self.add_record,"green"),
-   ("Bart anëtarët në vitin pasues",self.rollover_members,"blue"),("Regjistro hyrje",self.add_record,"purple"),
+   ("Shto regjistrim",self.add_record,"green"),
+   ("Ndrysho të zgjedhurin",self.edit_record,"blue"),
+   ("Bart anëtarët në vitin pasues",self.rollover_members,"blue"),
+   ("Dëftesë PDF",self.receipt_pdf,"purple"),
    ("Raport financiar A4",self.financial_pdf,"gold")
   ):
    btn=QPushButton(label);btn.setProperty("tone",tone);btn.clicked.connect(callback);actions.addWidget(btn)
