@@ -867,8 +867,20 @@ QStatusBar::item{border:0}
    for i in range(self.table.rowCount()):
     if self.table.isRowHidden(i):continue
     data.append([(self.table.item(i,j).text() if self.table.item(i,j) else "") for j in range(self.table.columnCount())])
-   doc=SimpleDocTemplate(p,pagesize=landscape(A4));styles=getSampleStyleSheet()
-   t=Table(data,repeatRows=1,hAlign="LEFT");t.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,0),colors.HexColor("#193c58")),("TEXTCOLOR",(0,0),(-1,0),colors.white),("FONTSIZE",(0,0),(-1,-1),6),("GRID",(0,0),(-1,-1),.25,colors.grey)]))
+   from reportlab.lib.pagesizes import A3
+   from reportlab.platypus import LongTable
+   membership=self.mode.currentText()=="Anëtarësia"
+   page=landscape(A3) if membership else landscape(A4)
+   doc=SimpleDocTemplate(p,pagesize=page,leftMargin=24,rightMargin=24,topMargin=32,bottomMargin=32)
+   styles=getSampleStyleSheet()
+   available_width=page[0]-doc.leftMargin-doc.rightMargin
+   if membership and len(data[0])>=16:
+    widths=[available_width*part/100 for part in (5,10,12,7,*([5.5]*12))]
+    widths=[w*available_width/sum(widths) for w in widths]
+   else:
+    widths=[available_width/len(data[0])]*len(data[0])
+   t=LongTable(data,colWidths=widths,repeatRows=1,hAlign="LEFT")
+   t.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,0),colors.HexColor("#193c58")),("TEXTCOLOR",(0,0),(-1,0),colors.white),("FONTSIZE",(0,0),(-1,-1),5.5 if membership else 7),("VALIGN",(0,0),(-1,-1),"MIDDLE"),("GRID",(0,0),(-1,-1),.25,colors.grey)]))
    doc.build([Paragraph("Xhamia Frankenthal - "+self.mode.currentText()+" "+self.year.currentText(),styles["Heading1"]),t])
   except Exception as e:QMessageBox.critical(self,"PDF",str(e))
 if __name__=="__main__":
