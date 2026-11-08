@@ -884,6 +884,11 @@ if __name__=="__main__":
   assert not mosque_logo().isNull() and not login.windowIcon().isNull()
   assert not win.hero.photo.isNull() and not win.hero.emblem.pixmap().isNull()
   assert win.table.rowCount()>0 and len(win.nav_buttons)==15
+  toolbar_buttons = [button.text() for button in win.findChildren(QPushButton)]
+  assert toolbar_buttons.count("Shto regjistrim")==1
+  assert "Ndrysho të zgjedhurin" in toolbar_buttons
+  assert "Dëftesë PDF" in toolbar_buttons
+  assert "Raport financiar A4" in toolbar_buttons
   win.search.setText("no-match-6ddba")
   assert all(win.table.isRowHidden(row) for row in range(win.table.rowCount()))
   win.reset_filters()
